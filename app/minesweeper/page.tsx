@@ -123,7 +123,7 @@ function countFlagsAround(board: Cell[][], r: number, c: number) {
 export default function MinesweeperPage() {
   // Sizing constants resembling classic Minesweeper
   const CELL_SIZE = 28; // px
-  const HEADER_HEIGHT = 56; // px
+  const HEADER_HEIGHT = 64; // px
   const TOOLBAR_HEIGHT = 48; // px
   const PADDING = 12; // px around the board
 
@@ -427,7 +427,7 @@ export default function MinesweeperPage() {
       style={{ ["--ms-cell-size" as any]: `${CELL_SIZE}px` }}
     >
       <div className="w-full max-w-full px-2 pt-2">
-        <div className="ms-panel" style={{ height: HEADER_HEIGHT - 16 }}>
+        <div className="ms-panel">
           <div className="ms-led">{pad3(minesRemaining)}</div>
           <button className="ms-smiley" onClick={() => reset()} aria-label="reset">
             {gameOver ? (isWin ? "😎" : "😵") : "😊"}
