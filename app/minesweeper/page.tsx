@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { MouseEvent } from "react";
+import type { MouseEvent, TouchEvent } from "react";
 
 type Cell = {
   isMine: boolean;
@@ -145,6 +145,9 @@ export default function MinesweeperPage() {
   const [flagsPlaced, setFlagsPlaced] = useState<number>(0);
   const [seconds, setSeconds] = useState<number>(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longPressTriggeredRef = useRef<boolean>(false);
+  const touchStartPosRef = useRef<{ x: number; y: number } | null>(null);
 
   const minesRemaining = Math.max(config.mines - flagsPlaced, 0);
 
@@ -321,6 +324,50 @@ export default function MinesweeperPage() {
     e.preventDefault();
   }, []);
 
+  const clearLongPressTimer = useCallback(() => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  }, []);
+
+  const onCellTouchStart = useCallback((e: TouchEvent, r: number, c: number) => {
+    e.preventDefault();
+    longPressTriggeredRef.current = false;
+    const t = e.touches[0];
+    if (!t) return;
+    touchStartPosRef.current = { x: t.clientX, y: t.clientY };
+    longPressTimerRef.current = setTimeout(() => {
+      longPressTriggeredRef.current = true;
+      toggleFlag(r, c);
+    }, 400);
+  }, [toggleFlag]);
+
+  const onCellTouchMove = useCallback((e: TouchEvent) => {
+    const t = e.touches[0];
+    const start = touchStartPosRef.current;
+    if (!t || !start) return;
+    const dx = t.clientX - start.x;
+    const dy = t.clientY - start.y;
+    const distance = Math.hypot(dx, dy);
+    if (distance > 10) {
+      clearLongPressTimer();
+    }
+  }, [clearLongPressTimer]);
+
+  const onCellTouchEnd = useCallback((e: TouchEvent, r: number, c: number) => {
+    e.preventDefault();
+    const wasLong = longPressTriggeredRef.current;
+    clearLongPressTimer();
+    touchStartPosRef.current = null;
+    if (!wasLong) revealCell(r, c);
+  }, [revealCell, clearLongPressTimer]);
+
+  const onCellTouchCancel = useCallback(() => {
+    clearLongPressTimer();
+    touchStartPosRef.current = null;
+  }, [clearLongPressTimer]);
+
   const cellContent = (cell: Cell) => {
     if (!cell.isRevealed) return cell.isFlagged ? "🚩" : "";
     if (cell.isMine) return "💣";
@@ -377,6 +424,10 @@ export default function MinesweeperPage() {
                   key={`${r}-${c}`}
                   onMouseDown={(e) => onCellMouseDown(e as unknown as MouseEvent, r, c)}
                   onDoubleClick={(e) => onCellDoubleClick(e as unknown as MouseEvent, r, c)}
+                  onTouchStart={(e) => onCellTouchStart(e as unknown as TouchEvent, r, c)}
+                  onTouchEnd={(e) => onCellTouchEnd(e as unknown as TouchEvent, r, c)}
+                  onTouchMove={(e) => onCellTouchMove(e as unknown as TouchEvent)}
+                  onTouchCancel={() => onCellTouchCancel()}
                   className={
                     "flex items-center justify-center text-[14px] font-bold " +
                     (cell.isRevealed ? "ms-cell-revealed " + (showNumber ? numberClass(cell.neighborMines) : "") : "ms-cell")

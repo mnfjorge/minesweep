@@ -88,6 +88,9 @@ body {
   height: var(--ms-cell-size);
   line-height: 1;
   user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  touch-action: manipulation;
 }
 
 /* Raised unrevealed cell */
