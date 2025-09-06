@@ -211,7 +211,6 @@ export default function MinesweeperPage() {
     const cell = newBoard[r][c];
     if (cell.isRevealed || cell.isFlagged) return;
 
-    cell.isRevealed = true;
     if (cell.isMine) {
       // Reveal all mines and stop timer
       for (let rr = 0; rr < newBoard.length; rr++) {
@@ -231,6 +230,8 @@ export default function MinesweeperPage() {
 
     if (cell.neighborMines === 0) {
       revealFlood(newBoard, r, c);
+    } else {
+      cell.isRevealed = true;
     }
     setBoard(newBoard);
     checkWin(newBoard);
@@ -262,9 +263,14 @@ export default function MinesweeperPage() {
     for (const [nr, nc] of getNeighbors(newBoard.length, newBoard[0].length, r, c)) {
       const ncell = newBoard[nr][nc];
       if (!ncell.isRevealed && !ncell.isFlagged) {
-        ncell.isRevealed = true;
-        if (ncell.isMine) hitMine = true;
-        else if (ncell.neighborMines === 0) revealFlood(newBoard, nr, nc);
+        if (ncell.isMine) {
+          hitMine = true;
+          ncell.isRevealed = true;
+        } else if (ncell.neighborMines === 0) {
+          revealFlood(newBoard, nr, nc);
+        } else {
+          ncell.isRevealed = true;
+        }
       }
     }
     if (hitMine) {
