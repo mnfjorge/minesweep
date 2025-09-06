@@ -129,10 +129,11 @@ export default function MinesweeperPage() {
 
   const computeConfig = useCallback((): BoardConfig => {
     if (typeof window === "undefined") return { rows: 9, cols: 9, mines: 10 };
+    const frameExtra = 24; // padding (10*2) + border (2*2)
     const availableWidth = Math.max(1, window.innerWidth - PADDING * 2);
     const availableHeight = Math.max(1, window.innerHeight - HEADER_HEIGHT - TOOLBAR_HEIGHT - PADDING * 2);
-    const cols = Math.max(5, Math.floor(availableWidth / CELL_SIZE));
-    const rows = Math.max(5, Math.floor(availableHeight / CELL_SIZE));
+    const cols = Math.max(5, Math.floor((availableWidth - frameExtra) / CELL_SIZE));
+    const rows = Math.max(5, Math.floor((availableHeight - frameExtra) / CELL_SIZE));
     const total = rows * cols;
     const mines = Math.max(1, Math.floor(total * 0.15)); // ~15% density
     return { rows, cols, mines };
@@ -416,6 +417,10 @@ export default function MinesweeperPage() {
 
   const gridTemplate = useMemo(() => ({ gridTemplateColumns: `repeat(${config.cols}, var(--ms-cell-size))` }), [config.cols]);
 
+  // Keep header, toolbar, and board the same outer width so edges align
+  // 2 * padding (10) + 2 * border (2) = 24 extra width
+  const frameWidth = useMemo(() => config.cols * CELL_SIZE + 24, [config.cols]);
+
   const numberClass = (n: number) => {
     if (n <= 0) return "";
     return `ms-n${n}`;
@@ -428,8 +433,8 @@ export default function MinesweeperPage() {
       className="h-screen w-screen overflow-hidden select-none flex flex-col items-center justify-start bg-[#bdbdbd]"
       style={{ ["--ms-cell-size" as any]: `${CELL_SIZE}px` }}
     >
-      <div className="w-full max-w-full px-2 pt-2">
-        <div className="ms-panel">
+      <div className="w-full max-w-full px-2 pt-2 flex justify-center">
+        <div className="ms-panel" style={{ width: frameWidth }}>
           <div className="ms-led">{pad3(minesRemaining)}</div>
           <button className="ms-smiley" onClick={() => reset()} aria-label="reset">
             {gameOver ? (isWin ? "😎" : "😵") : "😊"}
@@ -438,8 +443,8 @@ export default function MinesweeperPage() {
         </div>
       </div>
 
-      <div className="w-full max-w-full px-2 pt-2">
-        <div className="ms-toolbar" style={{ height: TOOLBAR_HEIGHT - 12 }}>
+      <div className="w-full max-w-full px-2 pt-2 flex justify-center">
+        <div className="ms-toolbar" style={{ height: TOOLBAR_HEIGHT - 12, width: frameWidth }}>
           <div className="flex items-center gap-2">
             <button
               className={`ms-tool ${tool === "reveal" ? "ms-tool-active" : ""}`}
@@ -463,7 +468,7 @@ export default function MinesweeperPage() {
       </div>
 
       <div className="w-full h-full px-2 pb-2 flex items-start justify-center">
-        <div className="ms-board" style={gridTemplate} onContextMenu={onContextMenu}>
+        <div className="ms-board" style={{ ...gridTemplate, width: frameWidth }} onContextMenu={onContextMenu}>
           {board.map((row: Cell[], r: number) => (
             row.map((cell: Cell, c: number) => {
               const content = cellContent(cell);
