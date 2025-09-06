@@ -263,9 +263,22 @@ export default function MinesweeperPage() {
     const newBoard = cloneBoard(board);
     const cell = newBoard[r][c];
     if (cell.isRevealed) return;
+    const wasFlagged = cell.isFlagged;
     cell.isFlagged = !cell.isFlagged;
     setBoard(newBoard);
     setFlagsPlaced((prev: number) => prev + (cell.isFlagged ? 1 : -1));
+    // Haptic feedback on mobile when adding a flag
+    if (!wasFlagged) {
+      try {
+        if (typeof window !== "undefined") {
+          const isCoarse = typeof window.matchMedia === "function" && window.matchMedia("(pointer: coarse)").matches;
+          const hasTouch = (navigator as any).maxTouchPoints > 0 || "ontouchstart" in window;
+          if ((isCoarse || hasTouch) && typeof (navigator as any).vibrate === "function") {
+            (navigator as any).vibrate(15);
+          }
+        }
+      } catch {}
+    }
   }, [board, gameOver, isFirstClick]);
 
   const chordReveal = useCallback((r: number, c: number) => {
