@@ -19,16 +19,19 @@ export const metadata: Metadata = {
   description: "Offline-first Minesweeper built with Next.js",
   manifest: "/manifest.webmanifest",
   themeColor: "#bdbdbd",
+  appleWebApp: {
+    title: "minesweeper",
+  },
   icons: {
     icon: [
-      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
-      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+      { url: "/web-app-manifest-192x192.png", sizes: "192x192", type: "image/png" },
+      { url: "/web-app-manifest-512x512.png", sizes: "512x512", type: "image/png" },
     ],
     apple: [
-      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/apple-icon.png", sizes: "180x180", type: "image/png" },
     ],
     other: [
-      { rel: "mask-icon", url: "/maskable-192.png" },
+      // No maskable icons provided in repo; skipping
     ],
   },
 };
