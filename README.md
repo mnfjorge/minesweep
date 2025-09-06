@@ -7,7 +7,7 @@ A minimalist Minesweeper game.
 - **Process**: vibe-coded with Cursor background agents
 - **Author**: [@mnfjorge](https://github.com/mnfjorge)
 
-## Context
+### Context
 
 This project was built in under 1 hour while we waited for our food at a restaurant after our System of a Down concert. Don't take this too seriously.
 
