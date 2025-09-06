@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { MouseEvent } from "react";
 
 type Cell = {
   isMine: boolean;
@@ -9,18 +10,11 @@ type Cell = {
   neighborMines: number;
 };
 
-type Difficulty = {
-  label: string;
+type BoardConfig = {
   rows: number;
   cols: number;
   mines: number;
 };
-
-const DIFFICULTIES: Difficulty[] = [
-  { label: "Beginner", rows: 9, cols: 9, mines: 10 },
-  { label: "Intermediate", rows: 16, cols: 16, mines: 40 },
-  { label: "Expert", rows: 16, cols: 30, mines: 99 },
-];
 
 function createEmptyBoard(rows: number, cols: number): Cell[][] {
   return Array.from({ length: rows }, () =>
@@ -127,10 +121,24 @@ function countFlagsAround(board: Cell[][], r: number, c: number) {
 }
 
 export default function MinesweeperPage() {
-  const [difficultyIdx, setDifficultyIdx] = useState<number>(0);
-  const difficulty = DIFFICULTIES[difficultyIdx];
+  // Sizing constants resembling classic Minesweeper
+  const CELL_SIZE = 28; // px
+  const HEADER_HEIGHT = 56; // px
+  const PADDING = 12; // px around the board
 
-  const [board, setBoard] = useState<Cell[][]>(() => createEmptyBoard(difficulty.rows, difficulty.cols));
+  const computeConfig = useCallback((): BoardConfig => {
+    if (typeof window === "undefined") return { rows: 9, cols: 9, mines: 10 };
+    const availableWidth = Math.max(1, window.innerWidth - PADDING * 2);
+    const availableHeight = Math.max(1, window.innerHeight - HEADER_HEIGHT - PADDING * 2);
+    const cols = Math.max(5, Math.floor(availableWidth / CELL_SIZE));
+    const rows = Math.max(5, Math.floor(availableHeight / CELL_SIZE));
+    const total = rows * cols;
+    const mines = Math.max(1, Math.floor(total * 0.15)); // ~15% density
+    return { rows, cols, mines };
+  }, []);
+
+  const [config, setConfig] = useState<BoardConfig>(() => computeConfig());
+  const [board, setBoard] = useState<Cell[][]>(() => createEmptyBoard(config.rows, config.cols));
   const [isFirstClick, setIsFirstClick] = useState<boolean>(true);
   const [gameOver, setGameOver] = useState<boolean>(false);
   const [isWin, setIsWin] = useState<boolean>(false);
@@ -138,13 +146,12 @@ export default function MinesweeperPage() {
   const [seconds, setSeconds] = useState<number>(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const minesRemaining = Math.max(difficulty.mines - flagsPlaced, 0);
+  const minesRemaining = Math.max(config.mines - flagsPlaced, 0);
 
-  const reset = useCallback((newDifficultyIdx?: number) => {
-    const idx = newDifficultyIdx ?? difficultyIdx;
-    const d = DIFFICULTIES[idx];
-    setDifficultyIdx(idx);
-    setBoard(createEmptyBoard(d.rows, d.cols));
+  const reset = useCallback((override?: BoardConfig) => {
+    const next = override ?? computeConfig();
+    setConfig(next);
+    setBoard(createEmptyBoard(next.rows, next.cols));
     setIsFirstClick(true);
     setGameOver(false);
     setIsWin(false);
@@ -154,10 +161,17 @@ export default function MinesweeperPage() {
       clearInterval(timerRef.current);
       timerRef.current = null;
     }
-  }, [difficultyIdx]);
+  }, [computeConfig]);
 
   useEffect(() => {
+    // Recompute on resize to keep board full-screen
+    const onResize = () => {
+      const next = computeConfig();
+      reset(next);
+    };
+    window.addEventListener("resize", onResize);
     return () => {
+      window.removeEventListener("resize", onResize);
       if (timerRef.current) clearInterval(timerRef.current);
     };
   }, []);
@@ -165,7 +179,7 @@ export default function MinesweeperPage() {
   const startTimer = useCallback(() => {
     if (timerRef.current) return;
     timerRef.current = setInterval(() => {
-      setSeconds(s => s + 1);
+      setSeconds((s: number) => s + 1);
     }, 1000);
   }, []);
 
@@ -194,16 +208,16 @@ export default function MinesweeperPage() {
         }
       }
       setBoard(clone);
-      setFlagsPlaced(difficulty.mines);
+      setFlagsPlaced(config.mines);
     }
-  }, [difficulty.mines]);
+  }, [config.mines]);
 
   const revealCell = useCallback((r: number, c: number) => {
     if (gameOver) return;
     let newBoard = cloneBoard(board);
 
     if (isFirstClick) {
-      placeMines(newBoard, r, c, difficulty.mines);
+      placeMines(newBoard, r, c, config.mines);
       setIsFirstClick(false);
       startTimer();
     }
@@ -235,7 +249,7 @@ export default function MinesweeperPage() {
     }
     setBoard(newBoard);
     checkWin(newBoard);
-  }, [board, checkWin, difficulty.mines, gameOver, isFirstClick, startTimer]);
+  }, [board, checkWin, config.mines, gameOver, isFirstClick, startTimer]);
 
   const toggleFlag = useCallback((r: number, c: number) => {
     if (gameOver) return;
@@ -248,7 +262,7 @@ export default function MinesweeperPage() {
     if (cell.isRevealed) return;
     cell.isFlagged = !cell.isFlagged;
     setBoard(newBoard);
-    setFlagsPlaced(prev => prev + (cell.isFlagged ? 1 : -1));
+    setFlagsPlaced((prev: number) => prev + (cell.isFlagged ? 1 : -1));
   }, [board, gameOver, isFirstClick]);
 
   const chordReveal = useCallback((r: number, c: number) => {
@@ -292,18 +306,18 @@ export default function MinesweeperPage() {
     checkWin(newBoard);
   }, [board, checkWin, gameOver]);
 
-  const onCellMouseDown = useCallback((e: React.MouseEvent, r: number, c: number) => {
+  const onCellMouseDown = useCallback((e: MouseEvent, r: number, c: number) => {
     e.preventDefault();
     if (e.button === 0) revealCell(r, c);
     else if (e.button === 2) toggleFlag(r, c);
   }, [revealCell, toggleFlag]);
 
-  const onCellDoubleClick = useCallback((e: React.MouseEvent, r: number, c: number) => {
+  const onCellDoubleClick = useCallback((e: MouseEvent, r: number, c: number) => {
     e.preventDefault();
     chordReveal(r, c);
   }, [chordReveal]);
 
-  const onContextMenu = useCallback((e: React.MouseEvent) => {
+  const onContextMenu = useCallback((e: MouseEvent) => {
     e.preventDefault();
   }, []);
 
@@ -328,59 +342,58 @@ export default function MinesweeperPage() {
     }
   };
 
-  const gridTemplate = useMemo(() => ({ gridTemplateColumns: `repeat(${difficulty.cols}, 28px)` }), [difficulty.cols]);
+  const gridTemplate = useMemo(() => ({ gridTemplateColumns: `repeat(${config.cols}, var(--ms-cell-size))` }), [config.cols]);
+
+  const numberClass = (n: number) => {
+    if (n <= 0) return "";
+    return `ms-n${n}`;
+  };
+
+  const pad3 = (n: number) => String(Math.max(0, Math.min(999, n))).padStart(3, "0");
 
   return (
-    <div className="min-h-screen flex flex-col items-center gap-4 p-6 select-none">
-      <div className="flex items-center gap-4">
-        <div className="text-sm">Mines: <span className="font-semibold">{minesRemaining}</span></div>
-        <div className="text-sm">Time: <span className="font-semibold">{seconds}</span>s</div>
-        <select
-          className="border rounded px-2 py-1 text-sm"
-          value={difficultyIdx}
-          onChange={(e) => reset(Number(e.target.value))}
-        >
-          {DIFFICULTIES.map((d, i) => (
-            <option key={d.label} value={i}>{d.label}</option>
-          ))}
-        </select>
-        <button className="border rounded px-2 py-1 text-sm" onClick={() => reset()}>
-          Reset
-        </button>
+    <div
+      className="h-screen w-screen overflow-hidden select-none flex flex-col items-center justify-start bg-[#bdbdbd]"
+      style={{ ["--ms-cell-size" as any]: `${CELL_SIZE}px` }}
+    >
+      <div className="w-full max-w-full px-2 pt-2">
+        <div className="ms-panel" style={{ height: HEADER_HEIGHT - 16 }}>
+          <div className="ms-led">{pad3(minesRemaining)}</div>
+          <button className="ms-smiley" onClick={() => reset()} aria-label="reset">
+            {gameOver ? (isWin ? "😎" : "😵") : "😊"}
+          </button>
+          <div className="ms-led">{pad3(seconds)}</div>
+        </div>
       </div>
 
-      <div
-        className="inline-grid border border-black/20 dark:border-white/20 bg-gray-100 dark:bg-gray-800"
-        style={gridTemplate}
-        onContextMenu={onContextMenu}
-      >
-        {board.map((row, r) => (
-          row.map((cell, c) => {
-            const content = cellContent(cell);
-            const showNumber = cell.isRevealed && !cell.isMine && cell.neighborMines > 0;
-            return (
-              <button
-                key={`${r}-${c}`}
-                onMouseDown={(e) => onCellMouseDown(e, r, c)}
-                onDoubleClick={(e) => onCellDoubleClick(e, r, c)}
-                className={
-                  "w-[28px] h-[28px] flex items-center justify-center text-sm font-bold border border-black/10 dark:border-white/10 " +
-                  (cell.isRevealed
-                    ? "bg-gray-200 dark:bg-gray-700 " + (showNumber ? numberColor(cell.neighborMines) : "")
-                    : "bg-gray-300 hover:bg-gray-200 active:translate-y-[1px] dark:bg-gray-600")
-                }
-                aria-label={`cell-${r}-${c}`}
-              >
-                {content}
-              </button>
-            );
-          })
-        ))}
+      <div className="w-full h-full px-2 pb-2 flex items-start justify-center">
+        <div className="ms-board" style={gridTemplate} onContextMenu={onContextMenu}>
+          {board.map((row, r) => (
+            row.map((cell, c) => {
+              const content = cellContent(cell);
+              const showNumber = cell.isRevealed && !cell.isMine && cell.neighborMines > 0;
+              return (
+                <button
+                  key={`${r}-${c}`}
+                  onMouseDown={(e) => onCellMouseDown(e as unknown as MouseEvent, r, c)}
+                  onDoubleClick={(e) => onCellDoubleClick(e as unknown as MouseEvent, r, c)}
+                  className={
+                    "flex items-center justify-center text-[14px] font-bold " +
+                    (cell.isRevealed ? "ms-cell-revealed " + (showNumber ? numberClass(cell.neighborMines) : "") : "ms-cell")
+                  }
+                  aria-label={`cell-${r}-${c}`}
+                >
+                  {content}
+                </button>
+              );
+            })
+          ))}
+        </div>
       </div>
 
       {gameOver && (
-        <div className="text-center text-lg font-semibold">
-          {isWin ? "You Win! 🎉" : "Boom! Game Over 💥"}
+        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 text-center text-base font-semibold">
+          {isWin ? "You Win!" : "Boom!"}
         </div>
       )}
     </div>
