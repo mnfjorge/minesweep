@@ -1,11 +1,11 @@
 /* Offline-first service worker for Minesweeper (Next.js app dir) */
-const CACHE_VERSION = 'ms-v1';
+const CACHE_VERSION = 'ms-v2';
 const APP_SHELL_CACHE = `app-shell-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `runtime-${CACHE_VERSION}`;
 
 // Precache core routes and assets necessary to load the app offline
 const PRECACHE_URLS = [
-  '/minesweeper',
+  '/',
   '/manifest.webmanifest',
   '/offline.html'
 ];
