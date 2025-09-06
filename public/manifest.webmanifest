@@ -1,7 +1,7 @@
 {
   "name": "Minesweeper",
   "short_name": "Mines",
-  "start_url": "/minesweeper",
+  "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "background_color": "#bdbdbd",
