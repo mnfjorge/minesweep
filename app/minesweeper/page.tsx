@@ -124,12 +124,13 @@ export default function MinesweeperPage() {
   // Sizing constants resembling classic Minesweeper
   const CELL_SIZE = 28; // px
   const HEADER_HEIGHT = 64; // px
+  const TOOLBAR_HEIGHT = 48; // px
   const PADDING = 12; // px around the board
 
   const computeConfig = useCallback((): BoardConfig => {
     if (typeof window === "undefined") return { rows: 9, cols: 9, mines: 10 };
     const availableWidth = Math.max(1, window.innerWidth - PADDING * 2);
-    const availableHeight = Math.max(1, window.innerHeight - HEADER_HEIGHT - PADDING * 2);
+    const availableHeight = Math.max(1, window.innerHeight - HEADER_HEIGHT - TOOLBAR_HEIGHT - PADDING * 2);
     const cols = Math.max(5, Math.floor(availableWidth / CELL_SIZE));
     const rows = Math.max(5, Math.floor(availableHeight / CELL_SIZE));
     const total = rows * cols;
@@ -144,6 +145,7 @@ export default function MinesweeperPage() {
   const [isWin, setIsWin] = useState<boolean>(false);
   const [flagsPlaced, setFlagsPlaced] = useState<number>(0);
   const [seconds, setSeconds] = useState<number>(0);
+  const [tool, setTool] = useState<"reveal" | "flag">("reveal");
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const longPressTriggeredRef = useRef<boolean>(false);
@@ -324,9 +326,12 @@ export default function MinesweeperPage() {
 
   const onCellMouseDown = useCallback((e: MouseEvent, r: number, c: number) => {
     e.preventDefault();
-    if (e.button === 0) revealCell(r, c);
+    if (e.button === 0) {
+      if (tool === "flag") toggleFlag(r, c);
+      else revealCell(r, c);
+    }
     else if (e.button === 2) toggleFlag(r, c);
-  }, [revealCell, toggleFlag]);
+  }, [revealCell, toggleFlag, tool]);
 
   const onCellDoubleClick = useCallback((e: MouseEvent, r: number, c: number) => {
     e.preventDefault();
@@ -350,11 +355,13 @@ export default function MinesweeperPage() {
     const t = e.touches[0];
     if (!t) return;
     touchStartPosRef.current = { x: t.clientX, y: t.clientY };
-    longPressTimerRef.current = setTimeout(() => {
-      longPressTriggeredRef.current = true;
-      toggleFlag(r, c);
-    }, 400);
-  }, [toggleFlag]);
+    if (tool !== "flag") {
+      longPressTimerRef.current = setTimeout(() => {
+        longPressTriggeredRef.current = true;
+        toggleFlag(r, c);
+      }, 400);
+    }
+  }, [toggleFlag, tool]);
 
   const onCellTouchMove = useCallback((e: TouchEvent) => {
     const t = e.touches[0];
@@ -373,8 +380,11 @@ export default function MinesweeperPage() {
     const wasLong = longPressTriggeredRef.current;
     clearLongPressTimer();
     touchStartPosRef.current = null;
-    if (!wasLong) revealCell(r, c);
-  }, [revealCell, clearLongPressTimer]);
+    if (!wasLong) {
+      if (tool === "flag") toggleFlag(r, c);
+      else revealCell(r, c);
+    }
+  }, [revealCell, toggleFlag, clearLongPressTimer, tool]);
 
   const onCellTouchCancel = useCallback(() => {
     clearLongPressTimer();
@@ -423,6 +433,30 @@ export default function MinesweeperPage() {
             {gameOver ? (isWin ? "😎" : "😵") : "😊"}
           </button>
           <div className="ms-led">{pad3(seconds)}</div>
+        </div>
+      </div>
+
+      <div className="w-full max-w-full px-2 pt-2">
+        <div className="ms-toolbar" style={{ height: TOOLBAR_HEIGHT - 12 }}>
+          <div className="flex items-center gap-2">
+            <button
+              className={`ms-tool ${tool === "reveal" ? "ms-tool-active" : ""}`}
+              onClick={() => setTool("reveal")}
+              aria-label="tool-reveal"
+            >
+              ⛏️
+            </button>
+            <button
+              className={`ms-tool ${tool === "flag" ? "ms-tool-active" : ""}`}
+              onClick={() => setTool("flag")}
+              aria-label="tool-flag"
+            >
+              🚩
+            </button>
+          </div>
+          <div className="ml-auto text-sm font-semibold">
+            {tool === "reveal" ? "Reveal" : "Flag"}
+          </div>
         </div>
       </div>
 
