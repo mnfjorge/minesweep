@@ -327,11 +327,19 @@ export default function MinesweeperPage() {
   const onCellMouseDown = useCallback((e: MouseEvent, r: number, c: number) => {
     e.preventDefault();
     if (e.button === 0) {
-      if (tool === "flag") toggleFlag(r, c);
-      else revealCell(r, c);
+      if (tool === "flag") {
+        toggleFlag(r, c);
+      } else {
+        const cell = board[r][c];
+        if (cell.isRevealed && cell.neighborMines > 0) {
+          chordReveal(r, c);
+        } else {
+          revealCell(r, c);
+        }
+      }
     }
     else if (e.button === 2) toggleFlag(r, c);
-  }, [revealCell, toggleFlag, tool]);
+  }, [board, chordReveal, revealCell, toggleFlag, tool]);
 
   const onCellDoubleClick = useCallback((e: MouseEvent, r: number, c: number) => {
     e.preventDefault();
@@ -381,10 +389,18 @@ export default function MinesweeperPage() {
     clearLongPressTimer();
     touchStartPosRef.current = null;
     if (!wasLong) {
-      if (tool === "flag") toggleFlag(r, c);
-      else revealCell(r, c);
+      if (tool === "flag") {
+        toggleFlag(r, c);
+      } else {
+        const cell = board[r][c];
+        if (cell.isRevealed && cell.neighborMines > 0) {
+          chordReveal(r, c);
+        } else {
+          revealCell(r, c);
+        }
+      }
     }
-  }, [revealCell, toggleFlag, clearLongPressTimer, tool]);
+  }, [board, chordReveal, revealCell, toggleFlag, clearLongPressTimer, tool]);
 
   const onCellTouchCancel = useCallback(() => {
     clearLongPressTimer();
