@@ -110,6 +110,7 @@ body {
   background: var(--ms-bg);
   box-shadow: inset -2px -2px 0 var(--ms-lo), inset 2px 2px 0 var(--ms-hi);
   border: 2px solid var(--ms-dk);
+  box-sizing: border-box;
 }
 
 .ms-led {
@@ -145,10 +146,11 @@ body {
 .ms-board {
   display: grid;
   background: var(--ms-bg);
-  padding: 8px;
+  padding: 10px;
   gap: 0;
   box-shadow: inset -2px -2px 0 var(--ms-lo), inset 2px 2px 0 var(--ms-hi);
   border: 2px solid var(--ms-dk);
+  box-sizing: border-box;
 }
 
 /* Toolbar for selecting tools (Reveal / Flag) */
@@ -160,6 +162,7 @@ body {
   background: var(--ms-bg);
   box-shadow: inset -2px -2px 0 var(--ms-lo), inset 2px 2px 0 var(--ms-hi);
   border: 2px solid var(--ms-dk);
+  box-sizing: border-box;
 }
 
 .ms-tool {
