@@ -38,7 +38,8 @@ body {
   margin: 0 auto;
   max-width: 720px;
   background: var(--ms-bg, #f3f3f3);
-  color: var(--foreground);
+  /* Force strong contrast against the light minesweeper panel */
+  color: #111111;
   border: 2px solid var(--ms-dk, #333);
   box-shadow: inset -2px -2px 0 var(--ms-lo, #7b7b7b), inset 2px 2px 0 var(--ms-hi, #ffffff);
   border-radius: 6px;
@@ -65,9 +66,19 @@ body {
   border-radius: 6px;
   text-decoration: none;
   color: inherit;
+  font-weight: 700;
+  /* Give the button/link the classic raised minesweeper look */
+  box-shadow: inset -2px -2px 0 var(--ms-lo, #7b7b7b), inset 2px 2px 0 var(--ms-hi, #ffffff);
 }
+.pwa-banner__button:hover,
+.pwa-banner__link:hover { filter: brightness(1.06); }
 .pwa-banner__button:active {
   transform: translateY(1px);
+}
+.pwa-banner__button:focus-visible,
+.pwa-banner__link:focus-visible {
+  outline: 2px solid var(--ms-led-fg, #ff2a2a);
+  outline-offset: 2px;
 }
 .pwa-banner__dismiss {
   appearance: none;
