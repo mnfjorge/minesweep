@@ -328,15 +328,13 @@ export default function MinesweeperPage() {
   const onCellMouseDown = useCallback((e: MouseEvent, r: number, c: number) => {
     e.preventDefault();
     if (e.button === 0) {
-      if (tool === "flag") {
+      const cell = board[r][c];
+      if (cell.isRevealed && cell.neighborMines > 0) {
+        chordReveal(r, c);
+      } else if (tool === "flag") {
         toggleFlag(r, c);
       } else {
-        const cell = board[r][c];
-        if (cell.isRevealed && cell.neighborMines > 0) {
-          chordReveal(r, c);
-        } else {
-          revealCell(r, c);
-        }
+        revealCell(r, c);
       }
     }
     else if (e.button === 2) toggleFlag(r, c);
@@ -390,15 +388,13 @@ export default function MinesweeperPage() {
     clearLongPressTimer();
     touchStartPosRef.current = null;
     if (!wasLong) {
-      if (tool === "flag") {
+      const cell = board[r][c];
+      if (cell.isRevealed && cell.neighborMines > 0) {
+        chordReveal(r, c);
+      } else if (tool === "flag") {
         toggleFlag(r, c);
       } else {
-        const cell = board[r][c];
-        if (cell.isRevealed && cell.neighborMines > 0) {
-          chordReveal(r, c);
-        } else {
-          revealCell(r, c);
-        }
+        revealCell(r, c);
       }
     }
   }, [board, chordReveal, revealCell, toggleFlag, clearLongPressTimer, tool]);
