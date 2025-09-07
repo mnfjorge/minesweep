@@ -122,16 +122,16 @@ function countFlagsAround(board: Cell[][], r: number, c: number) {
 
 export default function MinesweeperPage() {
   // Sizing constants resembling classic Minesweeper
-  const CELL_SIZE = 28; // px
+  const CELL_SIZE = 32; // px (bigger tiles like the reference)
   const HEADER_HEIGHT = 64; // px
-  const TOOLBAR_HEIGHT = 48; // px
-  const PADDING = 12; // px around the board
+  // Removed toolbar to reclaim one extra row of tiles
+  const PADDING = 0; // remove external padding around the board
 
   const computeConfig = useCallback((): BoardConfig => {
     if (typeof window === "undefined") return { rows: 9, cols: 9, mines: 10 };
-    const frameExtra = 24; // padding (10*2) + border (2*2)
+    const frameExtra = 4; // board borders only (no inner padding)
     const availableWidth = Math.max(1, window.innerWidth - PADDING * 2);
-    const availableHeight = Math.max(1, window.innerHeight - HEADER_HEIGHT - TOOLBAR_HEIGHT - PADDING * 2);
+    const availableHeight = Math.max(1, window.innerHeight - HEADER_HEIGHT - PADDING * 2);
     const cols = Math.max(5, Math.floor((availableWidth - frameExtra) / CELL_SIZE));
     const rows = Math.max(5, Math.floor((availableHeight - frameExtra) / CELL_SIZE));
     const total = rows * cols;
@@ -413,9 +413,10 @@ export default function MinesweeperPage() {
 
   const gridTemplate = useMemo(() => ({ gridTemplateColumns: `repeat(${config.cols}, var(--ms-cell-size))` }), [config.cols]);
 
-  // Keep header, toolbar, and board the same outer width so edges align
-  // 2 * padding (10) + 2 * border (2) = 24 extra width
-  const frameWidth = useMemo(() => config.cols * CELL_SIZE + 24, [config.cols]);
+  // Content width of the tile grid (no padding)
+  const boardWidth = useMemo(() => config.cols * CELL_SIZE, [config.cols]);
+  // Panel content width so that panel outer width ≈ board outer width
+  const panelWidth = useMemo(() => Math.max(120, boardWidth + 4 - 24), [boardWidth]);
 
   const numberClass = (n: number) => {
     if (n <= 0) return "";
@@ -424,47 +425,85 @@ export default function MinesweeperPage() {
 
   const pad3 = (n: number) => String(Math.max(0, Math.min(999, n))).padStart(3, "0");
 
+  // Simple 7-segment display for 3 digits
+  const SevenSegment = ({ value }: { value: number }) => {
+    const str = pad3(value);
+    const on = "#ff2a2a";
+    const off = "#300000";
+    const digitWidth = 14;
+    const digitHeight = 24;
+    const seg = 4; // thickness
+    const gap = 3; // space between digits
+
+    // Segment layout helper for a single digit at x offset
+    const segmentsFor = (x: number, lit: boolean[]) => (
+      <g transform={`translate(${x},0)`}>
+        {/* A (top) */}
+        <rect x={1} y={0} width={digitWidth - 2} height={seg} fill={lit[0] ? on : off} />
+        {/* B (upper-right) */}
+        <rect x={digitWidth - seg} y={1} width={seg} height={digitHeight / 2 - 2} fill={lit[1] ? on : off} />
+        {/* C (lower-right) */}
+        <rect x={digitWidth - seg} y={digitHeight / 2 + 1} width={seg} height={digitHeight / 2 - 2} fill={lit[2] ? on : off} />
+        {/* D (bottom) */}
+        <rect x={1} y={digitHeight - seg} width={digitWidth - 2} height={seg} fill={lit[3] ? on : off} />
+        {/* E (lower-left) */}
+        <rect x={0} y={digitHeight / 2 + 1} width={seg} height={digitHeight / 2 - 2} fill={lit[4] ? on : off} />
+        {/* F (upper-left) */}
+        <rect x={0} y={1} width={seg} height={digitHeight / 2 - 2} fill={lit[5] ? on : off} />
+        {/* G (middle) */}
+        <rect x={1} y={digitHeight / 2 - seg / 2} width={digitWidth - 2} height={seg} fill={lit[6] ? on : off} />
+      </g>
+    );
+
+    const map: Record<string, [boolean, boolean, boolean, boolean, boolean, boolean, boolean]> = {
+      "0": [true, true, true, true, true, true, false],
+      "1": [false, true, true, false, false, false, false],
+      "2": [true, true, false, true, true, false, true],
+      "3": [true, true, true, true, false, false, true],
+      "4": [false, true, true, false, false, true, true],
+      "5": [true, false, true, true, false, true, true],
+      "6": [true, false, true, true, true, true, true],
+      "7": [true, true, true, false, false, false, false],
+      "8": [true, true, true, true, true, true, true],
+      "9": [true, true, true, true, false, true, true],
+    };
+
+    const width = digitWidth * 3 + gap * 2;
+    const height = digitHeight;
+    return (
+      <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
+        {segmentsFor(0, map[str[0]])}
+        {segmentsFor(digitWidth + gap, map[str[1]])}
+        {segmentsFor(2 * (digitWidth + gap), map[str[2]])}
+      </svg>
+    );
+  };
+
   return (
     <div
       className="h-screen w-screen overflow-hidden select-none flex flex-col items-center justify-start bg-[#bdbdbd]"
       style={{ ["--ms-cell-size" as any]: `${CELL_SIZE}px` }}
     >
-      <div className="w-full max-w-full px-2 pt-2 flex justify-center">
-        <div className="ms-panel" style={{ width: frameWidth }}>
-          <div className="ms-led">{pad3(minesRemaining)}</div>
+      <div className="w-full max-w-full flex justify-center pt-2">
+        <div className="ms-panel" style={{ width: panelWidth }}>
+          <div className="ms-led"><SevenSegment value={minesRemaining} /></div>
           <button className="ms-smiley" onClick={() => reset()} aria-label="reset">
             {gameOver ? (isWin ? "😎" : "😵") : "😊"}
           </button>
-          <div className="ms-led">{pad3(seconds)}</div>
+          <button
+            className={`ms-tool ${tool === "flag" ? "ms-tool-active" : ""}`}
+            onClick={() => setTool(tool === "flag" ? "reveal" : "flag")}
+            aria-label="toggle-flag"
+            style={{ width: 36, height: 36 }}
+          >
+            {tool === "flag" ? "🚩" : "⛏️"}
+          </button>
+          <div className="ms-led"><SevenSegment value={seconds} /></div>
         </div>
       </div>
 
-      <div className="w-full max-w-full px-2 pt-2 flex justify-center">
-        <div className="ms-toolbar" style={{ height: TOOLBAR_HEIGHT - 12, width: frameWidth }}>
-          <div className="flex items-center gap-2">
-            <button
-              className={`ms-tool ${tool === "reveal" ? "ms-tool-active" : ""}`}
-              onClick={() => setTool("reveal")}
-              aria-label="tool-reveal"
-            >
-              ⛏️
-            </button>
-            <button
-              className={`ms-tool ${tool === "flag" ? "ms-tool-active" : ""}`}
-              onClick={() => setTool("flag")}
-              aria-label="tool-flag"
-            >
-              🚩
-            </button>
-          </div>
-          <div className="ml-auto text-sm font-semibold">
-            {tool === "reveal" ? "Reveal" : "Flag"}
-          </div>
-        </div>
-      </div>
-
-      <div className="w-full h-full px-2 pb-2 flex items-start justify-center">
-        <div className="ms-board" style={{ ...gridTemplate, width: frameWidth }} onContextMenu={onContextMenu}>
+      <div className="w-full h-full flex items-start justify-center">
+        <div className="ms-board" style={{ ...gridTemplate, width: boardWidth }} onContextMenu={onContextMenu}>
           {board.map((row: Cell[], r: number) => (
             row.map((cell: Cell, c: number) => {
               const content = cellContent(cell);
@@ -479,7 +518,7 @@ export default function MinesweeperPage() {
                   onTouchMove={(e) => onCellTouchMove(e as unknown as TouchEvent)}
                   onTouchCancel={() => onCellTouchCancel()}
                   className={
-                    "flex items-center justify-center text-[14px] font-bold " +
+                    "flex items-center justify-center text-[16px] font-bold " +
                     (cell.isRevealed ? "ms-cell-revealed " + (showNumber ? numberClass(cell.neighborMines) : "") : "ms-cell")
                   }
                   aria-label={`cell-${r}-${c}`}
