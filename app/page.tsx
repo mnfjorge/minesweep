@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { MouseEvent, TouchEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { MouseEvent, TouchEvent } from 'react';
 
 type Cell = {
   isMine: boolean;
@@ -44,14 +44,22 @@ function getNeighbors(rows: number, cols: number, r: number, c: number) {
   return neighbors;
 }
 
-function placeMines(board: Cell[][], firstClickR: number, firstClickC: number, mines: number) {
+function placeMines(
+  board: Cell[][],
+  firstClickR: number,
+  firstClickC: number,
+  mines: number
+) {
   const rows = board.length;
   const cols = board[0].length;
   const totalCells = rows * cols;
 
   // Avoid mine on first-click cell and its neighbors to guarantee a safe start
   const forbidden = new Set<number>();
-  const forbiddenCoords = [[firstClickR, firstClickC], ...getNeighbors(rows, cols, firstClickR, firstClickC)];
+  const forbiddenCoords = [
+    [firstClickR, firstClickC],
+    ...getNeighbors(rows, cols, firstClickR, firstClickC),
+  ];
   for (const [fr, fc] of forbiddenCoords) {
     forbidden.add(fr * cols + fc);
   }
@@ -91,7 +99,7 @@ function placeMines(board: Cell[][], firstClickR: number, firstClickC: number, m
 }
 
 function cloneBoard(board: Cell[][]) {
-  return board.map(row => row.map(cell => ({ ...cell })));
+  return board.map((row) => row.map((cell) => ({ ...cell })));
 }
 
 function revealFlood(board: Cell[][], r: number, c: number) {
@@ -116,7 +124,8 @@ function countFlagsAround(board: Cell[][], r: number, c: number) {
   const rows = board.length;
   const cols = board[0].length;
   let cnt = 0;
-  for (const [nr, nc] of getNeighbors(rows, cols, r, c)) if (board[nr][nc].isFlagged) cnt++;
+  for (const [nr, nc] of getNeighbors(rows, cols, r, c))
+    if (board[nr][nc].isFlagged) cnt++;
   return cnt;
 }
 
@@ -128,25 +137,36 @@ export default function MinesweeperPage() {
   const PADDING = 0; // remove external padding around the board
 
   const computeConfig = useCallback((): BoardConfig => {
-    if (typeof window === "undefined") return { rows: 9, cols: 9, mines: 10 };
+    if (typeof window === 'undefined') return { rows: 9, cols: 9, mines: 10 };
     const frameExtra = 4; // board borders only (no inner padding)
     const availableWidth = Math.max(1, window.innerWidth - PADDING * 2);
-    const availableHeight = Math.max(1, window.innerHeight - HEADER_HEIGHT - PADDING * 2);
-    const cols = Math.max(5, Math.floor((availableWidth - frameExtra) / CELL_SIZE));
-    const rows = Math.max(5, Math.floor((availableHeight - frameExtra) / CELL_SIZE));
+    const availableHeight = Math.max(
+      1,
+      window.innerHeight - HEADER_HEIGHT - PADDING * 2
+    );
+    const cols = Math.max(
+      5,
+      Math.floor((availableWidth - frameExtra) / CELL_SIZE)
+    );
+    const rows = Math.max(
+      5,
+      Math.floor((availableHeight - frameExtra) / CELL_SIZE)
+    );
     const total = rows * cols;
     const mines = Math.max(1, Math.floor(total * 0.15)); // ~15% density
     return { rows, cols, mines };
   }, []);
 
   const [config, setConfig] = useState<BoardConfig>(() => computeConfig());
-  const [board, setBoard] = useState<Cell[][]>(() => createEmptyBoard(config.rows, config.cols));
+  const [board, setBoard] = useState<Cell[][]>(() =>
+    createEmptyBoard(config.rows, config.cols)
+  );
   const [isFirstClick, setIsFirstClick] = useState<boolean>(true);
   const [gameOver, setGameOver] = useState<boolean>(false);
   const [isWin, setIsWin] = useState<boolean>(false);
   const [flagsPlaced, setFlagsPlaced] = useState<number>(0);
   const [seconds, setSeconds] = useState<number>(0);
-  const [tool, setTool] = useState<"reveal" | "flag">("reveal");
+  const [tool, setTool] = useState<'reveal' | 'flag'>('reveal');
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const longPressTriggeredRef = useRef<boolean>(false);
@@ -154,20 +174,23 @@ export default function MinesweeperPage() {
 
   const minesRemaining = Math.max(config.mines - flagsPlaced, 0);
 
-  const reset = useCallback((override?: BoardConfig) => {
-    const next = override ?? computeConfig();
-    setConfig(next);
-    setBoard(createEmptyBoard(next.rows, next.cols));
-    setIsFirstClick(true);
-    setGameOver(false);
-    setIsWin(false);
-    setFlagsPlaced(0);
-    setSeconds(0);
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
-  }, [computeConfig]);
+  const reset = useCallback(
+    (override?: BoardConfig) => {
+      const next = override ?? computeConfig();
+      setConfig(next);
+      setBoard(createEmptyBoard(next.rows, next.cols));
+      setIsFirstClick(true);
+      setGameOver(false);
+      setIsWin(false);
+      setFlagsPlaced(0);
+      setSeconds(0);
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    },
+    [computeConfig]
+  );
 
   useEffect(() => {
     // Recompute on resize to keep board full-screen
@@ -175,9 +198,9 @@ export default function MinesweeperPage() {
       const next = computeConfig();
       reset(next);
     };
-    window.addEventListener("resize", onResize);
+    window.addEventListener('resize', onResize);
     return () => {
-      window.removeEventListener("resize", onResize);
+      window.removeEventListener('resize', onResize);
       if (timerRef.current) clearInterval(timerRef.current);
     };
   }, []);
@@ -189,161 +212,189 @@ export default function MinesweeperPage() {
     }, 1000);
   }, []);
 
-  const checkWin = useCallback((b: Cell[][]) => {
-    let revealed = 0;
-    let mines = 0;
-    for (const row of b) {
-      for (const cell of row) {
-        if (cell.isMine) mines++;
-        else if (cell.isRevealed) revealed++;
-      }
-    }
-    const totalSafe = b.length * b[0].length - mines;
-    if (revealed === totalSafe) {
-      setIsWin(true);
-      setGameOver(true);
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
-      // Auto-flag remaining mines for satisfaction
-      const clone = cloneBoard(b);
-      for (let r = 0; r < clone.length; r++) {
-        for (let c = 0; c < clone[0].length; c++) {
-          if (clone[r][c].isMine) clone[r][c].isFlagged = true;
+  const checkWin = useCallback(
+    (b: Cell[][]) => {
+      let revealed = 0;
+      let mines = 0;
+      for (const row of b) {
+        for (const cell of row) {
+          if (cell.isMine) mines++;
+          else if (cell.isRevealed) revealed++;
         }
       }
-      setBoard(clone);
-      setFlagsPlaced(config.mines);
-    }
-  }, [config.mines]);
-
-  const revealCell = useCallback((r: number, c: number) => {
-    if (gameOver) return;
-    let newBoard = cloneBoard(board);
-
-    if (isFirstClick) {
-      placeMines(newBoard, r, c, config.mines);
-      setIsFirstClick(false);
-      startTimer();
-    }
-
-    const cell = newBoard[r][c];
-    if (cell.isRevealed || cell.isFlagged) return;
-
-    if (cell.isMine) {
-      // Reveal all mines and stop timer
-      for (let rr = 0; rr < newBoard.length; rr++) {
-        for (let cc = 0; cc < newBoard[0].length; cc++) {
-          if (newBoard[rr][cc].isMine) newBoard[rr][cc].isRevealed = true;
+      const totalSafe = b.length * b[0].length - mines;
+      if (revealed === totalSafe) {
+        setIsWin(true);
+        setGameOver(true);
+        if (timerRef.current) {
+          clearInterval(timerRef.current);
+          timerRef.current = null;
         }
-      }
-      setBoard(newBoard);
-      setGameOver(true);
-      setIsWin(false);
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
-      return;
-    }
-
-    if (cell.neighborMines === 0) {
-      revealFlood(newBoard, r, c);
-    } else {
-      cell.isRevealed = true;
-    }
-    setBoard(newBoard);
-    checkWin(newBoard);
-  }, [board, checkWin, config.mines, gameOver, isFirstClick, startTimer]);
-
-  const toggleFlag = useCallback((r: number, c: number) => {
-    if (gameOver) return;
-    if (isFirstClick) {
-      // Do not allow flagging before first reveal in classic variants; allow to match typical behavior though
-      // We'll allow flagging even before first click
-    }
-    const newBoard = cloneBoard(board);
-    const cell = newBoard[r][c];
-    if (cell.isRevealed) return;
-    const wasFlagged = cell.isFlagged;
-    cell.isFlagged = !cell.isFlagged;
-    setBoard(newBoard);
-    setFlagsPlaced((prev: number) => prev + (cell.isFlagged ? 1 : -1));
-    // Haptic feedback on mobile when adding a flag
-    if (!wasFlagged) {
-      try {
-        if (typeof window !== "undefined") {
-          const isCoarse = typeof window.matchMedia === "function" && window.matchMedia("(pointer: coarse)").matches;
-          const hasTouch = (navigator as any).maxTouchPoints > 0 || "ontouchstart" in window;
-          if ((isCoarse || hasTouch) && typeof (navigator as any).vibrate === "function") {
-            (navigator as any).vibrate(15);
+        // Auto-flag remaining mines for satisfaction
+        const clone = cloneBoard(b);
+        for (let r = 0; r < clone.length; r++) {
+          for (let c = 0; c < clone[0].length; c++) {
+            if (clone[r][c].isMine) clone[r][c].isFlagged = true;
           }
         }
-      } catch {}
-    }
-  }, [board, gameOver, isFirstClick]);
-
-  const chordReveal = useCallback((r: number, c: number) => {
-    if (gameOver) return;
-    const base = board[r][c];
-    if (!base.isRevealed || base.neighborMines <= 0) return;
-    const newBoard = cloneBoard(board);
-    const flaggedAround = countFlagsAround(newBoard, r, c);
-    if (flaggedAround !== base.neighborMines) return;
-
-    let hitMine = false;
-    for (const [nr, nc] of getNeighbors(newBoard.length, newBoard[0].length, r, c)) {
-      const ncell = newBoard[nr][nc];
-      if (!ncell.isRevealed && !ncell.isFlagged) {
-        if (ncell.isMine) {
-          hitMine = true;
-          ncell.isRevealed = true;
-        } else if (ncell.neighborMines === 0) {
-          revealFlood(newBoard, nr, nc);
-        } else {
-          ncell.isRevealed = true;
-        }
+        setBoard(clone);
+        setFlagsPlaced(config.mines);
       }
-    }
-    if (hitMine) {
-      for (let rr = 0; rr < newBoard.length; rr++) {
-        for (let cc = 0; cc < newBoard[0].length; cc++) {
-          if (newBoard[rr][cc].isMine) newBoard[rr][cc].isRevealed = true;
+    },
+    [config.mines]
+  );
+
+  const revealCell = useCallback(
+    (r: number, c: number) => {
+      if (gameOver) return;
+      let newBoard = cloneBoard(board);
+
+      if (isFirstClick) {
+        placeMines(newBoard, r, c, config.mines);
+        setIsFirstClick(false);
+        startTimer();
+      }
+
+      const cell = newBoard[r][c];
+      if (cell.isRevealed || cell.isFlagged) return;
+
+      if (cell.isMine) {
+        // Reveal all mines and stop timer
+        for (let rr = 0; rr < newBoard.length; rr++) {
+          for (let cc = 0; cc < newBoard[0].length; cc++) {
+            if (newBoard[rr][cc].isMine) newBoard[rr][cc].isRevealed = true;
+          }
         }
+        setBoard(newBoard);
+        setGameOver(true);
+        setIsWin(false);
+        if (timerRef.current) {
+          clearInterval(timerRef.current);
+          timerRef.current = null;
+        }
+        return;
+      }
+
+      if (cell.neighborMines === 0) {
+        revealFlood(newBoard, r, c);
+      } else {
+        cell.isRevealed = true;
       }
       setBoard(newBoard);
-      setGameOver(true);
-      setIsWin(false);
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
-      return;
-    }
-    setBoard(newBoard);
-    checkWin(newBoard);
-  }, [board, checkWin, gameOver]);
+      checkWin(newBoard);
+    },
+    [board, checkWin, config.mines, gameOver, isFirstClick, startTimer]
+  );
 
-  const onCellMouseDown = useCallback((e: MouseEvent, r: number, c: number) => {
-    e.preventDefault();
-    if (e.button === 0) {
-      const cell = board[r][c];
-      if (cell.isRevealed && cell.neighborMines > 0) {
-        chordReveal(r, c);
-      } else if (tool === "flag") {
-        toggleFlag(r, c);
-      } else {
-        revealCell(r, c);
+  const toggleFlag = useCallback(
+    (r: number, c: number) => {
+      if (gameOver) return;
+      if (isFirstClick) {
+        // Do not allow flagging before first reveal in classic variants; allow to match typical behavior though
+        // We'll allow flagging even before first click
       }
-    }
-    else if (e.button === 2) toggleFlag(r, c);
-  }, [board, chordReveal, revealCell, toggleFlag, tool]);
+      const newBoard = cloneBoard(board);
+      const cell = newBoard[r][c];
+      if (cell.isRevealed) return;
+      const wasFlagged = cell.isFlagged;
+      cell.isFlagged = !cell.isFlagged;
+      setBoard(newBoard);
+      setFlagsPlaced((prev: number) => prev + (cell.isFlagged ? 1 : -1));
+      // Haptic feedback on mobile when adding a flag
+      if (!wasFlagged) {
+        try {
+          if (typeof window !== 'undefined') {
+            const isCoarse =
+              typeof window.matchMedia === 'function' &&
+              window.matchMedia('(pointer: coarse)').matches;
+            const hasTouch =
+              (navigator as any).maxTouchPoints > 0 || 'ontouchstart' in window;
+            if (
+              (isCoarse || hasTouch) &&
+              typeof (navigator as any).vibrate === 'function'
+            ) {
+              (navigator as any).vibrate(15);
+            }
+          }
+        } catch {}
+      }
+    },
+    [board, gameOver, isFirstClick]
+  );
 
-  const onCellDoubleClick = useCallback((e: MouseEvent, r: number, c: number) => {
-    e.preventDefault();
-    chordReveal(r, c);
-  }, [chordReveal]);
+  const chordReveal = useCallback(
+    (r: number, c: number) => {
+      if (gameOver) return;
+      const base = board[r][c];
+      if (!base.isRevealed || base.neighborMines <= 0) return;
+      const newBoard = cloneBoard(board);
+      const flaggedAround = countFlagsAround(newBoard, r, c);
+      if (flaggedAround !== base.neighborMines) return;
+
+      let hitMine = false;
+      for (const [nr, nc] of getNeighbors(
+        newBoard.length,
+        newBoard[0].length,
+        r,
+        c
+      )) {
+        const ncell = newBoard[nr][nc];
+        if (!ncell.isRevealed && !ncell.isFlagged) {
+          if (ncell.isMine) {
+            hitMine = true;
+            ncell.isRevealed = true;
+          } else if (ncell.neighborMines === 0) {
+            revealFlood(newBoard, nr, nc);
+          } else {
+            ncell.isRevealed = true;
+          }
+        }
+      }
+      if (hitMine) {
+        for (let rr = 0; rr < newBoard.length; rr++) {
+          for (let cc = 0; cc < newBoard[0].length; cc++) {
+            if (newBoard[rr][cc].isMine) newBoard[rr][cc].isRevealed = true;
+          }
+        }
+        setBoard(newBoard);
+        setGameOver(true);
+        setIsWin(false);
+        if (timerRef.current) {
+          clearInterval(timerRef.current);
+          timerRef.current = null;
+        }
+        return;
+      }
+      setBoard(newBoard);
+      checkWin(newBoard);
+    },
+    [board, checkWin, gameOver]
+  );
+
+  const onCellMouseDown = useCallback(
+    (e: MouseEvent, r: number, c: number) => {
+      e.preventDefault();
+      if (e.button === 0) {
+        const cell = board[r][c];
+        if (cell.isRevealed && cell.neighborMines > 0) {
+          chordReveal(r, c);
+        } else if (tool === 'flag') {
+          toggleFlag(r, c);
+        } else {
+          revealCell(r, c);
+        }
+      } else if (e.button === 2) toggleFlag(r, c);
+    },
+    [board, chordReveal, revealCell, toggleFlag, tool]
+  );
+
+  const onCellDoubleClick = useCallback(
+    (e: MouseEvent, r: number, c: number) => {
+      e.preventDefault();
+      chordReveal(r, c);
+    },
+    [chordReveal]
+  );
 
   const onContextMenu = useCallback((e: MouseEvent) => {
     e.preventDefault();
@@ -356,48 +407,57 @@ export default function MinesweeperPage() {
     }
   }, []);
 
-  const onCellTouchStart = useCallback((e: TouchEvent, r: number, c: number) => {
-    e.preventDefault();
-    longPressTriggeredRef.current = false;
-    const t = e.touches[0];
-    if (!t) return;
-    touchStartPosRef.current = { x: t.clientX, y: t.clientY };
-    if (tool !== "flag") {
-      longPressTimerRef.current = setTimeout(() => {
-        longPressTriggeredRef.current = true;
-        toggleFlag(r, c);
-      }, 400);
-    }
-  }, [toggleFlag, tool]);
-
-  const onCellTouchMove = useCallback((e: TouchEvent) => {
-    const t = e.touches[0];
-    const start = touchStartPosRef.current;
-    if (!t || !start) return;
-    const dx = t.clientX - start.x;
-    const dy = t.clientY - start.y;
-    const distance = Math.hypot(dx, dy);
-    if (distance > 10) {
-      clearLongPressTimer();
-    }
-  }, [clearLongPressTimer]);
-
-  const onCellTouchEnd = useCallback((e: TouchEvent, r: number, c: number) => {
-    e.preventDefault();
-    const wasLong = longPressTriggeredRef.current;
-    clearLongPressTimer();
-    touchStartPosRef.current = null;
-    if (!wasLong) {
-      const cell = board[r][c];
-      if (cell.isRevealed && cell.neighborMines > 0) {
-        chordReveal(r, c);
-      } else if (tool === "flag") {
-        toggleFlag(r, c);
-      } else {
-        revealCell(r, c);
+  const onCellTouchStart = useCallback(
+    (e: TouchEvent, r: number, c: number) => {
+      e.preventDefault();
+      longPressTriggeredRef.current = false;
+      const t = e.touches[0];
+      if (!t) return;
+      touchStartPosRef.current = { x: t.clientX, y: t.clientY };
+      if (tool !== 'flag') {
+        longPressTimerRef.current = setTimeout(() => {
+          longPressTriggeredRef.current = true;
+          toggleFlag(r, c);
+        }, 400);
       }
-    }
-  }, [board, chordReveal, revealCell, toggleFlag, clearLongPressTimer, tool]);
+    },
+    [toggleFlag, tool]
+  );
+
+  const onCellTouchMove = useCallback(
+    (e: TouchEvent) => {
+      const t = e.touches[0];
+      const start = touchStartPosRef.current;
+      if (!t || !start) return;
+      const dx = t.clientX - start.x;
+      const dy = t.clientY - start.y;
+      const distance = Math.hypot(dx, dy);
+      if (distance > 10) {
+        clearLongPressTimer();
+      }
+    },
+    [clearLongPressTimer]
+  );
+
+  const onCellTouchEnd = useCallback(
+    (e: TouchEvent, r: number, c: number) => {
+      e.preventDefault();
+      const wasLong = longPressTriggeredRef.current;
+      clearLongPressTimer();
+      touchStartPosRef.current = null;
+      if (!wasLong) {
+        const cell = board[r][c];
+        if (cell.isRevealed && cell.neighborMines > 0) {
+          chordReveal(r, c);
+        } else if (tool === 'flag') {
+          toggleFlag(r, c);
+        } else {
+          revealCell(r, c);
+        }
+      }
+    },
+    [board, chordReveal, revealCell, toggleFlag, clearLongPressTimer, tool]
+  );
 
   const onCellTouchCancel = useCallback(() => {
     clearLongPressTimer();
@@ -405,31 +465,35 @@ export default function MinesweeperPage() {
   }, [clearLongPressTimer]);
 
   const cellContent = (cell: Cell) => {
-    if (!cell.isRevealed) return cell.isFlagged ? "🚩" : "";
-    if (cell.isMine) return "💣";
-    if (cell.neighborMines === 0) return "";
+    if (!cell.isRevealed) return cell.isFlagged ? '🚩' : '';
+    if (cell.isMine) return '💣';
+    if (cell.neighborMines === 0) return '';
     return String(cell.neighborMines);
   };
 
-  const gridTemplate = useMemo(() => ({ gridTemplateColumns: `repeat(${config.cols}, var(--ms-cell-size))` }), [config.cols]);
+  const gridTemplate = useMemo(
+    () => ({
+      gridTemplateColumns: `repeat(${config.cols}, var(--ms-cell-size))`,
+    }),
+    [config.cols]
+  );
 
   // Content width of the tile grid (no padding)
   const boardWidth = useMemo(() => config.cols * CELL_SIZE, [config.cols]);
-  // Panel content width so that panel outer width ≈ board outer width
-  const panelWidth = useMemo(() => Math.max(120, boardWidth + 4 - 24), [boardWidth]);
 
   const numberClass = (n: number) => {
-    if (n <= 0) return "";
+    if (n <= 0) return '';
     return `ms-n${n}`;
   };
 
-  const pad3 = (n: number) => String(Math.max(0, Math.min(999, n))).padStart(3, "0");
+  const pad3 = (n: number) =>
+    String(Math.max(0, Math.min(999, n))).padStart(3, '0');
 
   // Simple 7-segment display for 3 digits
   const SevenSegment = ({ value }: { value: number }) => {
     const str = pad3(value);
-    const on = "#ff2a2a";
-    const off = "#300000";
+    const on = '#ff2a2a';
+    const off = '#300000';
     const digitWidth = 14;
     const digitHeight = 24;
     const seg = 4; // thickness
@@ -439,33 +503,78 @@ export default function MinesweeperPage() {
     const segmentsFor = (x: number, lit: boolean[]) => (
       <g transform={`translate(${x},0)`}>
         {/* A (top) */}
-        <rect x={1} y={0} width={digitWidth - 2} height={seg} fill={lit[0] ? on : off} />
+        <rect
+          x={1}
+          y={0}
+          width={digitWidth - 2}
+          height={seg}
+          fill={lit[0] ? on : off}
+        />
         {/* B (upper-right) */}
-        <rect x={digitWidth - seg} y={1} width={seg} height={digitHeight / 2 - 2} fill={lit[1] ? on : off} />
+        <rect
+          x={digitWidth - seg}
+          y={1}
+          width={seg}
+          height={digitHeight / 2 - 2}
+          fill={lit[1] ? on : off}
+        />
         {/* C (lower-right) */}
-        <rect x={digitWidth - seg} y={digitHeight / 2 + 1} width={seg} height={digitHeight / 2 - 2} fill={lit[2] ? on : off} />
+        <rect
+          x={digitWidth - seg}
+          y={digitHeight / 2 + 1}
+          width={seg}
+          height={digitHeight / 2 - 2}
+          fill={lit[2] ? on : off}
+        />
         {/* D (bottom) */}
-        <rect x={1} y={digitHeight - seg} width={digitWidth - 2} height={seg} fill={lit[3] ? on : off} />
+        <rect
+          x={1}
+          y={digitHeight - seg}
+          width={digitWidth - 2}
+          height={seg}
+          fill={lit[3] ? on : off}
+        />
         {/* E (lower-left) */}
-        <rect x={0} y={digitHeight / 2 + 1} width={seg} height={digitHeight / 2 - 2} fill={lit[4] ? on : off} />
+        <rect
+          x={0}
+          y={digitHeight / 2 + 1}
+          width={seg}
+          height={digitHeight / 2 - 2}
+          fill={lit[4] ? on : off}
+        />
         {/* F (upper-left) */}
-        <rect x={0} y={1} width={seg} height={digitHeight / 2 - 2} fill={lit[5] ? on : off} />
+        <rect
+          x={0}
+          y={1}
+          width={seg}
+          height={digitHeight / 2 - 2}
+          fill={lit[5] ? on : off}
+        />
         {/* G (middle) */}
-        <rect x={1} y={digitHeight / 2 - seg / 2} width={digitWidth - 2} height={seg} fill={lit[6] ? on : off} />
+        <rect
+          x={1}
+          y={digitHeight / 2 - seg / 2}
+          width={digitWidth - 2}
+          height={seg}
+          fill={lit[6] ? on : off}
+        />
       </g>
     );
 
-    const map: Record<string, [boolean, boolean, boolean, boolean, boolean, boolean, boolean]> = {
-      "0": [true, true, true, true, true, true, false],
-      "1": [false, true, true, false, false, false, false],
-      "2": [true, true, false, true, true, false, true],
-      "3": [true, true, true, true, false, false, true],
-      "4": [false, true, true, false, false, true, true],
-      "5": [true, false, true, true, false, true, true],
-      "6": [true, false, true, true, true, true, true],
-      "7": [true, true, true, false, false, false, false],
-      "8": [true, true, true, true, true, true, true],
-      "9": [true, true, true, true, false, true, true],
+    const map: Record<
+      string,
+      [boolean, boolean, boolean, boolean, boolean, boolean, boolean]
+    > = {
+      '0': [true, true, true, true, true, true, false],
+      '1': [false, true, true, false, false, false, false],
+      '2': [true, true, false, true, true, false, true],
+      '3': [true, true, true, true, false, false, true],
+      '4': [false, true, true, false, false, true, true],
+      '5': [true, false, true, true, false, true, true],
+      '6': [true, false, true, true, true, true, true],
+      '7': [true, true, true, false, false, false, false],
+      '8': [true, true, true, true, true, true, true],
+      '9': [true, true, true, true, false, true, true],
     };
 
     const width = digitWidth * 3 + gap * 2;
@@ -482,44 +591,73 @@ export default function MinesweeperPage() {
   return (
     <div
       className="h-screen w-screen overflow-hidden select-none flex flex-col items-center justify-start bg-[#bdbdbd]"
-      style={{ ["--ms-cell-size" as any]: `${CELL_SIZE}px` }}
+      style={{ ['--ms-cell-size' as any]: `${CELL_SIZE}px` }}
     >
-      <div className="w-full max-w-full flex justify-center pt-2">
-        <div className="ms-panel" style={{ width: panelWidth }}>
-          <div className="ms-led"><SevenSegment value={minesRemaining} /></div>
-          <button className="ms-smiley" onClick={() => reset()} aria-label="reset">
-            {gameOver ? (isWin ? "😎" : "😵") : "😊"}
+      <div className="w-full max-w-full flex justify-center">
+        <div
+          className="ms-panel"
+          style={{ width: boardWidth + 2, marginLeft: '2px' }}
+        >
+          <div className="ms-led">
+            <SevenSegment value={minesRemaining} />
+          </div>
+          <button
+            className="ms-smiley"
+            onClick={() => reset()}
+            aria-label="reset"
+          >
+            {gameOver ? (isWin ? '😎' : '😵') : '😊'}
           </button>
           <button
-            className={`ms-tool ${tool === "flag" ? "ms-tool-active" : ""}`}
-            onClick={() => setTool(tool === "flag" ? "reveal" : "flag")}
+            className={`ms-tool ${tool === 'flag' ? 'ms-tool-active' : ''}`}
+            onClick={() => setTool(tool === 'flag' ? 'reveal' : 'flag')}
             aria-label="toggle-flag"
             style={{ width: 36, height: 36 }}
           >
-            {tool === "flag" ? "🚩" : "⛏️"}
+            {tool === 'flag' ? '🚩' : '⛏️'}
           </button>
-          <div className="ms-led"><SevenSegment value={seconds} /></div>
+          <div className="ms-led">
+            <SevenSegment value={seconds} />
+          </div>
         </div>
       </div>
 
       <div className="w-full h-full flex items-start justify-center">
-        <div className="ms-board" style={{ ...gridTemplate, width: boardWidth }} onContextMenu={onContextMenu}>
-          {board.map((row: Cell[], r: number) => (
+        <div
+          className="ms-board"
+          style={{ ...gridTemplate, width: boardWidth }}
+          onContextMenu={onContextMenu}
+        >
+          {board.map((row: Cell[], r: number) =>
             row.map((cell: Cell, c: number) => {
               const content = cellContent(cell);
-              const showNumber = cell.isRevealed && !cell.isMine && cell.neighborMines > 0;
+              const showNumber =
+                cell.isRevealed && !cell.isMine && cell.neighborMines > 0;
               return (
                 <button
                   key={`${r}-${c}`}
-                  onMouseDown={(e) => onCellMouseDown(e as unknown as MouseEvent, r, c)}
-                  onDoubleClick={(e) => onCellDoubleClick(e as unknown as MouseEvent, r, c)}
-                  onTouchStart={(e) => onCellTouchStart(e as unknown as TouchEvent, r, c)}
-                  onTouchEnd={(e) => onCellTouchEnd(e as unknown as TouchEvent, r, c)}
-                  onTouchMove={(e) => onCellTouchMove(e as unknown as TouchEvent)}
+                  onMouseDown={(e) =>
+                    onCellMouseDown(e as unknown as MouseEvent, r, c)
+                  }
+                  onDoubleClick={(e) =>
+                    onCellDoubleClick(e as unknown as MouseEvent, r, c)
+                  }
+                  onTouchStart={(e) =>
+                    onCellTouchStart(e as unknown as TouchEvent, r, c)
+                  }
+                  onTouchEnd={(e) =>
+                    onCellTouchEnd(e as unknown as TouchEvent, r, c)
+                  }
+                  onTouchMove={(e) =>
+                    onCellTouchMove(e as unknown as TouchEvent)
+                  }
                   onTouchCancel={() => onCellTouchCancel()}
                   className={
-                    "flex items-center justify-center text-[16px] font-bold " +
-                    (cell.isRevealed ? "ms-cell-revealed " + (showNumber ? numberClass(cell.neighborMines) : "") : "ms-cell")
+                    'flex items-center justify-center text-[16px] font-bold ' +
+                    (cell.isRevealed
+                      ? 'ms-cell-revealed ' +
+                        (showNumber ? numberClass(cell.neighborMines) : '')
+                      : 'ms-cell')
                   }
                   aria-label={`cell-${r}-${c}`}
                 >
@@ -527,16 +665,15 @@ export default function MinesweeperPage() {
                 </button>
               );
             })
-          ))}
+          )}
         </div>
       </div>
 
       {gameOver && (
         <div className="absolute bottom-3 left-1/2 -translate-x-1/2 text-center text-base font-semibold">
-          {isWin ? "You Win!" : "Boom!"}
+          {isWin ? 'You Win!' : 'Boom!'}
         </div>
       )}
     </div>
   );
 }
-
