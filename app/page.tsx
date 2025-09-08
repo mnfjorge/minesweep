@@ -98,6 +98,24 @@ function placeMines(
   }
 }
 
+function recomputeNeighborCounts(board: Cell[][]) {
+  const rows = board.length;
+  const cols = rows > 0 ? board[0].length : 0;
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      if (board[r][c].isMine) {
+        board[r][c].neighborMines = -1;
+        continue;
+      }
+      let count = 0;
+      for (const [nr, nc] of getNeighbors(rows, cols, r, c)) {
+        if (board[nr][nc].isMine) count++;
+      }
+      board[r][c].neighborMines = count;
+    }
+  }
+}
+
 function cloneBoard(board: Cell[][]) {
   return board.map((row) => row.map((cell) => ({ ...cell })));
 }
@@ -172,6 +190,20 @@ export default function MinesweeperPage() {
   const longPressTriggeredRef = useRef<boolean>(false);
   const touchStartPosRef = useRef<{ x: number; y: number } | null>(null);
 
+  // Keep latest state in refs for resize handler
+  const boardRef = useRef<Cell[][]>(board);
+  useEffect(() => {
+    boardRef.current = board;
+  }, [board]);
+  const isFirstClickRef = useRef<boolean>(isFirstClick);
+  useEffect(() => {
+    isFirstClickRef.current = isFirstClick;
+  }, [isFirstClick]);
+  const gameOverRef = useRef<boolean>(gameOver);
+  useEffect(() => {
+    gameOverRef.current = gameOver;
+  }, [gameOver]);
+
   const minesRemaining = Math.max(config.mines - flagsPlaced, 0);
 
   const reset = useCallback(
@@ -197,7 +229,43 @@ export default function MinesweeperPage() {
     // Recompute on resize to keep board full-screen
     const onResize = () => {
       const next = computeConfig();
-      reset(next);
+      const isInProgress = !isFirstClickRef.current && !gameOverRef.current;
+      if (isInProgress) {
+        const current = boardRef.current;
+        const newRows = next.rows;
+        const newCols = next.cols;
+        const newBoard = createEmptyBoard(newRows, newCols);
+        const copyRows = Math.min(current.length, newRows);
+        const copyCols = Math.min(current[0]?.length ?? 0, newCols);
+        for (let r = 0; r < copyRows; r++) {
+          for (let c = 0; c < copyCols; c++) {
+            const src = current[r][c];
+            newBoard[r][c] = {
+              isMine: src.isMine,
+              isRevealed: src.isRevealed,
+              isFlagged: src.isFlagged,
+              neighborMines: 0,
+            };
+          }
+        }
+        // Recompute neighbor counts for the resized board
+        recomputeNeighborCounts(newBoard);
+        // Recount mines and flags to sync UI counters
+        let mineCount = 0;
+        let flagCount = 0;
+        for (let r = 0; r < newBoard.length; r++) {
+          for (let c = 0; c < newBoard[0].length; c++) {
+            if (newBoard[r][c].isMine) mineCount++;
+            if (newBoard[r][c].isFlagged) flagCount++;
+          }
+        }
+        setConfig({ rows: newRows, cols: newCols, mines: mineCount });
+        setBoard(newBoard);
+        setFlagsPlaced(flagCount);
+        // Keep timer and game state as-is
+      } else {
+        reset(next);
+      }
     };
     window.addEventListener('resize', onResize);
     return () => {
