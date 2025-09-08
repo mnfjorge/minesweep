@@ -184,6 +184,7 @@ export default function MinesweeperPage() {
       setIsWin(false);
       setFlagsPlaced(0);
       setSeconds(0);
+      setTool((prev: 'reveal' | 'flag') => (prev === 'flag' ? 'reveal' : 'flag'));
       if (timerRef.current) {
         clearInterval(timerRef.current);
         timerRef.current = null;
