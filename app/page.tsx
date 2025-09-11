@@ -483,14 +483,16 @@ export default function MinesweeperPage() {
       const t = e.touches[0];
       if (!t) return;
       touchStartPosRef.current = { x: t.clientX, y: t.clientY };
-      if (tool !== 'flag') {
-        longPressTimerRef.current = setTimeout(() => {
-          longPressTriggeredRef.current = true;
+      longPressTimerRef.current = setTimeout(() => {
+        longPressTriggeredRef.current = true;
+        if (tool === 'flag') {
+          revealCell(r, c);
+        } else {
           toggleFlag(r, c);
-        }, 400);
-      }
+        }
+      }, 400);
     },
-    [toggleFlag, tool]
+    [revealCell, toggleFlag, tool]
   );
 
   const onCellTouchMove = useCallback(
