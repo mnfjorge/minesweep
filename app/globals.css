@@ -156,7 +156,7 @@ body {
 
 .ms-board {
   display: grid;
-  background: var(--ms-bg);
+  background: #d0d0d0;
   padding: 0;
   gap: 0;
   box-shadow: inset -2px -2px 0 var(--ms-lo), inset 2px 2px 0 var(--ms-hi);
