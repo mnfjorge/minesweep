@@ -107,7 +107,7 @@ body {
 
 .ms-panel {
   display: grid;
-  grid-template-columns: auto 1fr auto auto;
+  grid-template-columns: auto auto 1fr auto auto;
   align-items: center;
   gap: 12px;
   padding: 8px 10px;
@@ -254,3 +254,92 @@ body {
 .ms-n8 {
   color: #606060;
 }
+
+/* === Modal & Tabs === */
+.ms-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ms-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  border: none;
+}
+.ms-modal {
+  position: relative;
+  z-index: 81;
+  width: min(92vw, 520px);
+  background: var(--ms-bg);
+  color: #111111;
+  border: 2px solid var(--ms-dk);
+  border-radius: 8px;
+  box-shadow: inset -2px -2px 0 var(--ms-lo), inset 2px 2px 0 var(--ms-hi);
+}
+.ms-tabs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px;
+  border-bottom: 2px solid var(--ms-dk);
+}
+.ms-tab {
+  appearance: none;
+  border: 2px solid var(--ms-dk);
+  background: var(--ms-mid);
+  padding: 6px 10px;
+  border-radius: 6px;
+  box-shadow: inset -2px -2px 0 var(--ms-lo), inset 2px 2px 0 var(--ms-hi);
+  font-weight: 700;
+}
+.ms-tab:hover { filter: brightness(1.04); }
+.ms-tab:active { transform: translateY(1px); }
+.ms-tab-active {
+  background: #d6d6d6;
+  box-shadow: inset 2px 2px 0 var(--ms-lo), inset -2px -2px 0 var(--ms-hi);
+}
+.ms-tab.ms-tab-right {
+  margin-left: auto;
+}
+.ms-modal-section {
+  padding: 14px 16px 18px 16px;
+}
+.ms-section-title {
+  font-weight: 800;
+  margin-bottom: 10px;
+}
+.ms-radio-group {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.ms-radio {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  background: var(--ms-mid);
+  border: 2px solid var(--ms-dk);
+  border-radius: 6px;
+  box-shadow: inset -2px -2px 0 var(--ms-lo), inset 2px 2px 0 var(--ms-hi);
+}
+.ms-hint {
+  margin-top: 10px;
+  opacity: 0.8;
+}
+.ms-button {
+  appearance: none;
+  border: 2px solid var(--ms-dk);
+  background: #ffffff;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-weight: 800;
+  box-shadow: inset -2px -2px 0 var(--ms-lo), inset 2px 2px 0 var(--ms-hi);
+}
+.ms-button:hover { filter: brightness(1.03); }
+.ms-button:active { transform: translateY(1px); }
+.ms-copy { line-height: 1.4; margin-bottom: 12px; }
