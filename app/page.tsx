@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { signIn } from 'next-auth/react';
 import type { MouseEvent, TouchEvent } from 'react';
 
 type Cell = {
@@ -171,11 +172,29 @@ export default function MinesweeperPage() {
       Math.floor((availableHeight - frameExtra) / CELL_SIZE)
     );
     const total = rows * cols;
-    const mines = Math.max(1, Math.floor(total * 0.15)); // ~15% density
+    let difficultySaved: 'easy' | 'normal' | 'hard' = 'normal';
+    try {
+      const saved = window.localStorage.getItem('ms_difficulty_v1');
+      if (saved === 'easy' || saved === 'normal' || saved === 'hard') {
+        difficultySaved = saved;
+      }
+    } catch {}
+    const factor = difficultySaved === 'easy' ? 0.1 : difficultySaved === 'hard' ? 0.2 : 0.15;
+    const mines = Math.max(1, Math.floor(total * factor));
     return { rows, cols, mines };
   }, []);
 
   const [config, setConfig] = useState<BoardConfig>(() => computeConfig());
+  const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
+  const [activeTab, setActiveTab] = useState<'settings' | 'account'>('settings');
+  const [difficulty, setDifficulty] = useState<'easy' | 'normal' | 'hard'>(() => {
+    if (typeof window === 'undefined') return 'normal';
+    try {
+      const saved = window.localStorage.getItem('ms_difficulty_v1');
+      if (saved === 'easy' || saved === 'normal' || saved === 'hard') return saved;
+    } catch {}
+    return 'normal';
+  });
   const [board, setBoard] = useState<Cell[][]>(() =>
     createEmptyBoard(config.rows, config.cols)
   );
@@ -205,6 +224,29 @@ export default function MinesweeperPage() {
   }, [gameOver]);
 
   const minesRemaining = Math.max(config.mines - flagsPlaced, 0);
+  const computeMinesForDifficulty = useCallback(
+    (totalCells: number, diff: 'easy' | 'normal' | 'hard') => {
+      const factor = diff === 'easy' ? 0.1 : diff === 'hard' ? 0.2 : 0.15;
+      return Math.max(1, Math.floor(totalCells * factor));
+    },
+    []
+  );
+
+  const applyDifficulty = useCallback(
+    (nextDifficulty: 'easy' | 'normal' | 'hard') => {
+      const total = config.rows * config.cols;
+      const mines = computeMinesForDifficulty(total, nextDifficulty);
+      setDifficulty(nextDifficulty);
+      try {
+        if (typeof window !== 'undefined') {
+          window.localStorage.setItem('ms_difficulty_v1', nextDifficulty);
+        }
+      } catch {}
+      reset({ rows: config.rows, cols: config.cols, mines });
+    },
+    [computeMinesForDifficulty, config.cols, config.rows, reset]
+  );
+
 
   const reset = useCallback(
     (override?: BoardConfig) => {
@@ -673,6 +715,17 @@ export default function MinesweeperPage() {
             <SevenSegment value={minesRemaining} />
           </div>
           <button
+            className="ms-tool"
+            onClick={() => {
+              setActiveTab('settings');
+              setIsSettingsOpen(true);
+            }}
+            aria-label="open-settings"
+            style={{ width: 36, height: 36 }}
+          >
+            ⚙️
+          </button>
+          <button
             className="ms-smiley"
             onClick={() => reset()}
             aria-label="reset"
@@ -692,6 +745,94 @@ export default function MinesweeperPage() {
           </div>
         </div>
       </div>
+
+      {isSettingsOpen && (
+        <div className="ms-modal-overlay" role="dialog" aria-modal="true">
+          <div className="ms-modal" role="document">
+            <div className="ms-tabs">
+              <button
+                className={`ms-tab ${activeTab === 'settings' ? 'ms-tab-active' : ''}`}
+                onClick={() => setActiveTab('settings')}
+                aria-selected={activeTab === 'settings'}
+              >
+                Settings
+              </button>
+              <button
+                className={`ms-tab ${activeTab === 'account' ? 'ms-tab-active' : ''}`}
+                onClick={() => setActiveTab('account')}
+                aria-selected={activeTab === 'account'}
+              >
+                Account
+              </button>
+              <button
+                className="ms-tab ms-tab-right"
+                onClick={() => setIsSettingsOpen(false)}
+                aria-label="close"
+                title="Close"
+              >
+                ✕
+              </button>
+            </div>
+
+            {activeTab === 'settings' && (
+              <div className="ms-modal-section">
+                <div className="ms-section-title">Difficulty</div>
+                <div className="ms-radio-group">
+                  <label className="ms-radio">
+                    <input
+                      type="radio"
+                      name="difficulty"
+                      value="easy"
+                      checked={difficulty === 'easy'}
+                      onChange={() => applyDifficulty('easy')}
+                    />
+                    <span>Easy</span>
+                  </label>
+                  <label className="ms-radio">
+                    <input
+                      type="radio"
+                      name="difficulty"
+                      value="normal"
+                      checked={difficulty === 'normal'}
+                      onChange={() => applyDifficulty('normal')}
+                    />
+                    <span>Normal</span>
+                  </label>
+                  <label className="ms-radio">
+                    <input
+                      type="radio"
+                      name="difficulty"
+                      value="hard"
+                      checked={difficulty === 'hard'}
+                      onChange={() => applyDifficulty('hard')}
+                    />
+                    <span>Hard</span>
+                  </label>
+                </div>
+                <div className="ms-hint">Changes apply immediately and restart the board.</div>
+              </div>
+            )}
+
+            {activeTab === 'account' && (
+              <div className="ms-modal-section">
+                <div className="ms-section-title">Get Ranked</div>
+                <p className="ms-copy">
+                  Create an account to join the website ranking once it launches. Your best
+                  times and wins will appear on the leaderboard.
+                </p>
+                <button
+                  className="ms-button"
+                  onClick={() => signIn('google')}
+                  aria-label="Sign in with Google"
+                >
+                  Continue with Google
+                </button>
+              </div>
+            )}
+          </div>
+          <button className="ms-modal-backdrop" aria-hidden="true" onClick={() => setIsSettingsOpen(false)} />
+        </div>
+      )}
 
       <div className="w-full h-full flex items-start justify-center">
         <div
