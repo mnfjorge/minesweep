@@ -232,22 +232,6 @@ export default function MinesweeperPage() {
     []
   );
 
-  const applyDifficulty = useCallback(
-    (nextDifficulty: 'easy' | 'normal' | 'hard') => {
-      const total = config.rows * config.cols;
-      const mines = computeMinesForDifficulty(total, nextDifficulty);
-      setDifficulty(nextDifficulty);
-      try {
-        if (typeof window !== 'undefined') {
-          window.localStorage.setItem('ms_difficulty_v1', nextDifficulty);
-        }
-      } catch {}
-      reset({ rows: config.rows, cols: config.cols, mines });
-    },
-    [computeMinesForDifficulty, config.cols, config.rows, reset]
-  );
-
-
   const reset = useCallback(
     (override?: BoardConfig) => {
       const next = override ?? computeConfig();
@@ -265,6 +249,21 @@ export default function MinesweeperPage() {
       }
     },
     [computeConfig]
+  );
+
+  const applyDifficulty = useCallback(
+    (nextDifficulty: 'easy' | 'normal' | 'hard') => {
+      const total = config.rows * config.cols;
+      const mines = computeMinesForDifficulty(total, nextDifficulty);
+      setDifficulty(nextDifficulty);
+      try {
+        if (typeof window !== 'undefined') {
+          window.localStorage.setItem('ms_difficulty_v1', nextDifficulty);
+        }
+      } catch {}
+      reset({ rows: config.rows, cols: config.cols, mines });
+    },
+    [computeMinesForDifficulty, config.cols, config.rows, reset]
   );
 
   useEffect(() => {
