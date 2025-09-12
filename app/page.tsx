@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { signIn } from 'next-auth/react';
+import { signIn, signOut, useSession } from 'next-auth/react';
 import type { MouseEvent, TouchEvent } from 'react';
 
 type Cell = {
@@ -208,6 +208,8 @@ export default function MinesweeperPage() {
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const longPressTriggeredRef = useRef<boolean>(false);
   const touchStartPosRef = useRef<{ x: number; y: number } | null>(null);
+
+  const { data: session, status } = useSession();
 
   // Keep latest state in refs for resize handler
   const boardRef = useRef<Cell[][]>(board);
@@ -813,20 +815,36 @@ export default function MinesweeperPage() {
             )}
 
             {activeTab === 'account' && (
-              <div className="ms-modal-section">
-                <div className="ms-section-title">Get Ranked</div>
-                <p className="ms-copy">
-                  Create an account to join the website ranking once it launches. Your best
-                  times and wins will appear on the leaderboard.
-                </p>
-                <button
-                  className="ms-button"
-                  onClick={() => signIn('google')}
-                  aria-label="Sign in with Google"
-                >
-                  Continue with Google
-                </button>
-              </div>
+              status === 'authenticated' ? (
+                <div className="ms-modal-section">
+                  <div className="ms-section-title">Account</div>
+                  <p className="ms-copy">
+                    You're signed in as {session?.user?.name || session?.user?.email || 'your account'}.
+                  </p>
+                  <button
+                    className="ms-button"
+                    onClick={() => signOut({ redirect: false })}
+                    aria-label="Disconnect account"
+                  >
+                    Disconnect
+                  </button>
+                </div>
+              ) : (
+                <div className="ms-modal-section">
+                  <div className="ms-section-title">Get Ranked</div>
+                  <p className="ms-copy">
+                    Create an account to join the website ranking once it launches. Your best
+                    times and wins will appear on the leaderboard.
+                  </p>
+                  <button
+                    className="ms-button"
+                    onClick={() => signIn('google')}
+                    aria-label="Sign in with Google"
+                  >
+                    Continue with Google
+                  </button>
+                </div>
+              )
             )}
           </div>
           <button className="ms-modal-backdrop" aria-hidden="true" onClick={() => setIsSettingsOpen(false)} />
