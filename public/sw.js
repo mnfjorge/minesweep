@@ -1,5 +1,5 @@
 /* Offline-first service worker for Minesweeper (Next.js app dir) */
-const CACHE_VERSION = 'ms-v2';
+const CACHE_VERSION = 'ms-v3';
 const APP_SHELL_CACHE = `app-shell-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `runtime-${CACHE_VERSION}`;
 
@@ -37,6 +37,11 @@ self.addEventListener('fetch', (event) => {
 
   // Only handle same-origin requests
   if (url.origin !== self.location.origin) return;
+
+  // Do NOT cache or intercept API requests (e.g., NextAuth session/signout)
+  if (url.pathname.startsWith('/api/')) {
+    return; // Let the browser hit the network directly
+  }
 
   // For navigations, try network first, fallback to cache, then offline page
   if (request.mode === 'navigate' || (request.method === 'GET' && request.headers.get('accept')?.includes('text/html'))) {
