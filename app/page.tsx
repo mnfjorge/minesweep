@@ -495,7 +495,13 @@ export default function MinesweeperPage() {
         } else {
           revealCell(r, c);
         }
-      } else if (e.button === 2) toggleFlag(r, c);
+      } else if (e.button === 2) {
+        if (tool === 'flag') {
+          revealCell(r, c);
+        } else {
+          toggleFlag(r, c);
+        }
+      }
     },
     [board, chordReveal, revealCell, toggleFlag, tool]
   );
