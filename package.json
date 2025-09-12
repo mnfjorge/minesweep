@@ -9,7 +9,6 @@
   },
   "dependencies": {
     "@auth/core": "^0.40.0",
-    "@auth/nextjs": "0.0.0-380f8d56",
     "next": "15.5.2",
     "next-auth": "5.0.0-beta.29",
     "react": "19.1.0",
