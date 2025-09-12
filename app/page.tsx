@@ -881,8 +881,10 @@ export default function MinesweeperPage() {
       </div>
 
       {gameOver && (
-        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 text-center text-base font-semibold">
-          {isWin ? 'You Win!' : 'Boom!'}
+        <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
+          <div className="px-6 py-4 rounded-lg shadow-lg bg-black/80 text-white text-4xl md:text-6xl font-extrabold tracking-wide text-center">
+            {isWin ? 'You Win!' : 'Boom!'}
+          </div>
         </div>
       )}
     </div>
