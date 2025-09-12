@@ -269,46 +269,11 @@ export default function MinesweeperPage() {
   );
 
   useEffect(() => {
-    // Recompute on resize to keep board full-screen
+    // Only allow resizing the board before the game starts
     const onResize = () => {
+      if (!isFirstClickRef.current) return;
       const next = computeConfig();
-      const isInProgress = !isFirstClickRef.current && !gameOverRef.current;
-      if (isInProgress) {
-        const current = boardRef.current;
-        const newRows = next.rows;
-        const newCols = next.cols;
-        const newBoard = createEmptyBoard(newRows, newCols);
-        const copyRows = Math.min(current.length, newRows);
-        const copyCols = Math.min(current[0]?.length ?? 0, newCols);
-        for (let r = 0; r < copyRows; r++) {
-          for (let c = 0; c < copyCols; c++) {
-            const src = current[r][c];
-            newBoard[r][c] = {
-              isMine: src.isMine,
-              isRevealed: src.isRevealed,
-              isFlagged: src.isFlagged,
-              neighborMines: 0,
-            };
-          }
-        }
-        // Recompute neighbor counts for the resized board
-        recomputeNeighborCounts(newBoard);
-        // Recount mines and flags to sync UI counters
-        let mineCount = 0;
-        let flagCount = 0;
-        for (let r = 0; r < newBoard.length; r++) {
-          for (let c = 0; c < newBoard[0].length; c++) {
-            if (newBoard[r][c].isMine) mineCount++;
-            if (newBoard[r][c].isFlagged) flagCount++;
-          }
-        }
-        setConfig({ rows: newRows, cols: newCols, mines: mineCount });
-        setBoard(newBoard);
-        setFlagsPlaced(flagCount);
-        // Keep timer and game state as-is
-      } else {
-        reset(next);
-      }
+      reset(next);
     };
     window.addEventListener('resize', onResize);
     return () => {
