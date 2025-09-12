@@ -6,6 +6,7 @@ import "./globals.css";
 import ServiceWorkerRegistrar from "./sw-register";
 import InstallPrompt from "./components/InstallPrompt";
 import Analytics from "./components/Analytics";
+import Providers from "./providers";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -67,7 +68,9 @@ export default function RootLayout({
         <Suspense fallback={null}>
           <Analytics />
         </Suspense>
-        {children}
+        <Providers>
+          {children}
+        </Providers>
       </body>
     </html>
   );
