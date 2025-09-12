@@ -829,10 +829,10 @@ export default function MinesweeperPage() {
                   </p>
                   <button
                     className="ms-button"
-                    onClick={() => signOut({ redirect: false })}
-                    aria-label="Disconnect account"
+                    onClick={() => signOut({ callbackUrl: '/' })}
+                    aria-label="Logout"
                   >
-                    Disconnect
+                    Logout
                   </button>
                 </div>
               ) : (
