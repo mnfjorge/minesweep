@@ -369,14 +369,13 @@ export default function Game(props: {
     }, 1000);
   }, []);
 
-  // Local best score persistence (per difficulty) with name capture
+  // Local best score persistence (per difficulty) without prompting for name
   const saveLocalBest = useCallback(
     (args: { seconds: number; difficulty: Difficulty }) => {
       try {
         if (typeof window === 'undefined') return;
 
         const BEST_KEY = 'ms_best_v1';
-        const NAME_KEY = 'ms_player_name_v1';
 
         // Load current bests
         let bestAll: any = null;
@@ -397,29 +396,15 @@ export default function Game(props: {
         };
 
         let candidateName = '';
-        let storedName = '';
-        try {
-          storedName = String(window.localStorage.getItem(NAME_KEY) || '').trim();
-        } catch {}
-
-        candidateName = firstNonEmpty(
-          storedName,
-          (session?.user?.name as any) as string,
-          (session?.user?.email as any) as string
-        );
-
-        if (!candidateName) {
-          try {
-            const input = window.prompt('Enter your name to save your best score:', '');
-            const sanitized = typeof input === 'string' ? input.trim().slice(0, 40) : '';
-            if (sanitized) {
-              candidateName = sanitized;
-              try { window.localStorage.setItem(NAME_KEY, candidateName); } catch {}
-            }
-          } catch {}
+        if (status === 'authenticated') {
+          candidateName = firstNonEmpty(
+            (session?.user?.name as any) as string,
+            (session?.user?.email as any) as string
+          ) || 'Player';
+        } else {
+          // Not logged in: use fixed text and do not prompt
+          candidateName = 'Player';
         }
-
-        if (!candidateName) candidateName = 'Player';
 
         const prev = bestAll[args.difficulty];
         const isBetter = !prev || typeof prev.seconds !== 'number' || args.seconds < prev.seconds;
@@ -436,7 +421,7 @@ export default function Game(props: {
         }
       } catch {}
     },
-    [session]
+    [session, status]
   );
 
   const checkWin = useCallback(
