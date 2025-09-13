@@ -341,7 +341,8 @@ body {
 }
 
 /* Make the custom number input look like a proper input */
-.ms-radio input[type="number"] {
+.ms-radio input[type="number"],
+.ms-radio input[type="text"] {
   -webkit-appearance: none;
   appearance: none;
   background: #ffffff;
@@ -351,14 +352,16 @@ body {
   padding: 4px 6px;
   box-shadow: inset -2px -2px 0 var(--ms-lo), inset 2px 2px 0 var(--ms-hi);
 }
-.ms-radio input[type="number"]:focus-visible {
+.ms-radio input[type="number"]:focus-visible,
+.ms-radio input[type="text"]:focus-visible {
   outline: 2px solid var(--ms-led-fg);
   outline-offset: 2px;
 }
 
 /* Make the Custom mines input shrink on small screens to avoid overflow */
 @media (max-width: 480px) {
-  .ms-radio input[type="number"] {
+  .ms-radio input[type="number"],
+  .ms-radio input[type="text"] {
     width: clamp(64px, 28vw, 96px) !important;
   }
 }
