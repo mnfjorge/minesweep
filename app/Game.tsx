@@ -162,7 +162,7 @@ export default function Game(props: {
     );
     const rows = Math.max(
       5,
-      Math.floor((availableHeight - frameExtra) / CELL_SIZE)
+      Math.floor((availableHeight - frameExtra) / CELL_SIZE) - 1
     );
     const total = rows * cols;
     let difficultySaved: Difficulty = 'normal';
