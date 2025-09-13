@@ -1,5 +1,5 @@
 import { auth } from '@/auth';
-import { updateLeaderboardTop10 } from '@/lib/redis';
+import { updateLeaderboardTop10, fetchLeaderboardTop10 } from '@/lib/redis';
 
 export async function POST(request: Request) {
   const session = await auth();
@@ -25,6 +25,16 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error('rank POST error', error);
     return new Response(JSON.stringify({ error: 'Server error' }), { status: 500 });
+  }
+}
+
+export async function GET() {
+  try {
+    const entries = await fetchLeaderboardTop10();
+    return new Response(JSON.stringify({ entries }), { status: 200 });
+  } catch (error) {
+    console.error('rank GET error', error);
+    return new Response(JSON.stringify({ entries: [] }), { status: 200 });
   }
 }
 
