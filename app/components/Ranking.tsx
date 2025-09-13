@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type Entry = { userId: string; seconds: number; name: string | null; email: string | null };
 
@@ -16,13 +16,19 @@ export default function Ranking(props: {
   const [error, setError] = useState<string | null>(null);
   const [entries, setEntries] = useState<{ easy: Entry[]; normal: Entry[]; hard: Entry[] }>({ easy: [], normal: [], hard: [] });
 
+  // Keep latest callbacks stable without retriggering fetch effect
+  const fetchEntriesRef = useRef(fetchEntries);
+  const onTrackRef = useRef(onTrack);
+  useEffect(() => { fetchEntriesRef.current = fetchEntries; }, [fetchEntries]);
+  useEffect(() => { onTrackRef.current = onTrack; }, [onTrack]);
+
   useEffect(() => {
     if (!isOpen) return;
-    if (onTrack) onTrack("open_ranking");
+    if (onTrackRef.current) onTrackRef.current("open_ranking");
     let aborted = false;
     setLoading(true);
     setError(null);
-    fetchEntries()
+    fetchEntriesRef.current()
       .then(({ easy, normal, hard }) => {
         if (!aborted) setEntries({ easy: Array.isArray(easy) ? easy : [], normal: Array.isArray(normal) ? normal : [], hard: Array.isArray(hard) ? hard : [] });
       })
@@ -36,7 +42,7 @@ export default function Ranking(props: {
     return () => {
       aborted = true;
     };
-  }, [isOpen, fetchEntries, onTrack]);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
