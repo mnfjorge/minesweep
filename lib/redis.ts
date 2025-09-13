@@ -73,22 +73,33 @@ export type LeaderboardEntry = {
 export async function fetchLeaderboardTop10(): Promise<LeaderboardEntry[]> {
   if (!redis) return [];
   // Top 10 highest scores (i.e., least seconds)
+  // Fetch extra in case we filter out invalid members
   const rows = await redis.zrange<Array<{ member: string; score: number }>>(
     LEADERBOARD_KEY,
     0,
-    9,
+    49,
     { rev: true, withScores: true }
   );
 
+  const invalidMembers: string[] = [];
   const cleaned = rows.filter((row) => {
     const memberStr = String((row as any)?.member ?? '').trim().toLowerCase();
-    if (!memberStr) return false;
-    if (memberStr === 'undefined' || memberStr === 'null' || memberStr === 'unknown') return false;
+    if (!memberStr || memberStr === 'undefined' || memberStr === 'null' || memberStr === 'unknown') {
+      const original = String((row as any)?.member ?? '').trim();
+      if (original) invalidMembers.push(original);
+      return false;
+    }
     return true;
   });
 
+  if (invalidMembers.length > 0) {
+    try {
+      await (redis as any).zrem(LEADERBOARD_KEY, ...invalidMembers);
+    } catch {}
+  }
+
   const results = await Promise.all(
-    cleaned.map(async (row: { member: string; score: number }) => {
+    cleaned.slice(0, 10).map(async (row: { member: string; score: number }) => {
       const meta = await redis!.hgetall<Record<string, string>>(`user:${row.member}`);
       const sanitizeToNull = (value: unknown): string | null => {
         if (typeof value !== 'string') return null;
