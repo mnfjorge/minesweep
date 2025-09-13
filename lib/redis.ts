@@ -35,9 +35,16 @@ export async function updateLeaderboardTop10(payload: RankUpdatePayload) {
   const score = -Math.max(0, Math.floor(payload.seconds));
   // Store basic user metadata for display purposes
   try {
+    const sanitize = (value: unknown): string => {
+      if (typeof value !== 'string') return '';
+      const trimmed = value.trim();
+      const lower = trimmed.toLowerCase();
+      if (!trimmed || lower === 'undefined' || lower === 'null') return '';
+      return trimmed;
+    };
     await redis.hset(`user:${member}`, {
-      name: payload.name ?? '',
-      email: payload.email ?? '',
+      name: sanitize(payload.name),
+      email: sanitize(payload.email),
     });
   } catch {}
 
@@ -76,11 +83,18 @@ export async function fetchLeaderboardTop10(): Promise<LeaderboardEntry[]> {
   const results = await Promise.all(
     rows.map(async (row: { member: string; score: number }) => {
       const meta = await redis!.hgetall<Record<string, string>>(`user:${row.member}`);
+      const sanitizeToNull = (value: unknown): string | null => {
+        if (typeof value !== 'string') return null;
+        const trimmed = value.trim();
+        const lower = trimmed.toLowerCase();
+        if (!trimmed || lower === 'undefined' || lower === 'null') return null;
+        return trimmed;
+      };
       return {
         userId: typeof row.member === 'string' ? row.member : String(row.member),
         seconds: Math.max(0, -Math.floor(Number(row.score || 0))),
-        name: meta?.name ? meta.name : null,
-        email: meta?.email ? meta.email : null,
+        name: sanitizeToNull(meta?.name),
+        email: sanitizeToNull(meta?.email),
       } as LeaderboardEntry;
     })
   );
