@@ -1,6 +1,7 @@
 "use client";
 
 import { signIn, signOut, useSession } from "next-auth/react";
+import { useEffect, useState } from "react";
 
 export type Difficulty = "easy" | "normal" | "hard" | "custom";
 
@@ -18,6 +19,25 @@ export default function Settings(props: {
 }) {
   const { isOpen, activeTab, onChangeTab, onClose, difficulty, applyDifficulty, customMines, onChangeCustomMines, applyCustom, onTrack } = props;
   const { data: session, status } = useSession();
+
+  // Allow clearing the custom input while typing; commit on blur/Enter
+  const [customMinesText, setCustomMinesText] = useState<string>(
+    String(Number.isFinite(customMines) ? Math.max(1, customMines) : 1)
+  );
+
+  useEffect(() => {
+    // Keep local text in sync when external value changes
+    setCustomMinesText(String(Number.isFinite(customMines) ? Math.max(1, customMines) : 1));
+  }, [customMines, isOpen]);
+
+  const commitCustomMines = () => {
+    const parsed = Math.floor(Number(customMinesText));
+    const nextValue = Number.isFinite(parsed) && parsed > 0 ? parsed : Math.max(1, customMines || 1);
+    onChangeCustomMines(nextValue);
+    if (difficulty === "custom") applyCustom();
+    // Normalize displayed text after commit
+    setCustomMinesText(String(nextValue));
+  };
 
   if (!isOpen) return null;
 
@@ -88,11 +108,21 @@ export default function Settings(props: {
                 />
                 <span>Custom</span>
                 <input
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
                   min={1}
                   step={1}
-                  value={Number.isFinite(customMines) ? Math.max(1, customMines) : 1}
-                  onChange={(e: any) => { onChangeCustomMines(Math.max(1, Math.floor(Number(e.target.value)))); if (difficulty === "custom") applyCustom(); }}
+                  value={customMinesText}
+                  onChange={(e: any) => {
+                    const next = e.target.value;
+                    // Allow empty string and numeric-only input
+                    if (next === "" || /^[0-9]+$/.test(next)) {
+                      setCustomMinesText(next);
+                    }
+                  }}
+                  onBlur={commitCustomMines}
+                  onKeyDown={(e: any) => { if (e.key === "Enter") { e.preventDefault(); commitCustomMines(); } }}
                   aria-label="Custom bombs count"
                   style={{ width: 96 }}
                 />
