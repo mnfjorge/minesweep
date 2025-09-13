@@ -331,7 +331,7 @@ export default function MinesweeperPage() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ seconds }),
                 keepalive: true,
-              }).catch(() => {});
+              }).catch(() => { alert('Ranking not saved') });
             }
           }
         } catch {}
@@ -707,7 +707,7 @@ export default function MinesweeperPage() {
     setLeaderboardError(null);
     fetch('/api/rank', { method: 'GET', cache: 'no-store' })
       .then(async (r: Response) => {
-        if (!r.ok) throw new Error('Failed to load leaderboard');
+        if (!r.ok) alert('Failed to load leaderboard');
         const data = await r.json().catch(() => ({ entries: [] as Array<{ userId: string; seconds: number; name: string | null; email: string | null }> }));
         if (!aborted) setLeaderboardEntries(Array.isArray(data.entries) ? (data.entries as Array<{ userId: string; seconds: number; name: string | null; email: string | null }>) : []);
       })
