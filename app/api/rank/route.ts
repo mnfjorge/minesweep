@@ -15,7 +15,8 @@ export async function POST(request: Request) {
       return new Response(JSON.stringify({ error: 'Invalid payload' }), { status: 400 });
     }
 
-    const userId = (session.user as any).id || session.user.email || session.user.name || 'unknown';
+    const rawId = (session.user as any).id || session.user.email || session.user.name || 'unknown';
+    const userId = typeof rawId === 'string' ? rawId : String(rawId);
     const name = session.user.name ?? null;
     const email = session.user.email ?? null;
 
