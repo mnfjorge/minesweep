@@ -364,9 +364,32 @@ export default function Game(props: {
     // Initial measure
     measurePanel();
     window.addEventListener('resize', onResize);
+    // React to visual viewport changes (mobile URL bar show/hide, IME)
+    let vv: any | null = null;
+    let onVvChange: (() => void) | null = null;
+    try {
+      vv = (window as any).visualViewport ?? null;
+      if (vv) {
+        onVvChange = () => {
+          // Re-measure panel then recompute layout when idle
+          measurePanel();
+          if (!isFirstClickRef.current) return;
+          const next = computeConfig();
+          reset(next);
+        };
+        vv.addEventListener('resize', onVvChange);
+        vv.addEventListener('scroll', onVvChange);
+      }
+    } catch {}
     return () => {
       window.removeEventListener('resize', onResize);
       try { ro && ro.disconnect(); } catch {}
+      try {
+        if (vv && onVvChange) {
+          vv.removeEventListener('resize', onVvChange);
+          vv.removeEventListener('scroll', onVvChange);
+        }
+      } catch {}
       if (timerRef.current) clearInterval(timerRef.current);
     };
   }, []);
