@@ -30,7 +30,7 @@ export type RankUpdatePayload = {
 
 export async function updateLeaderboardTop10(payload: RankUpdatePayload) {
   if (!redis) return;
-  const member = payload.userId;
+  const member = typeof payload.userId === 'string' ? payload.userId : String(payload.userId);
   // We want lower seconds to be ranked higher, so score = -seconds
   const score = -Math.max(0, Math.floor(payload.seconds));
   // Store basic user metadata for display purposes
@@ -77,7 +77,7 @@ export async function fetchLeaderboardTop10(): Promise<LeaderboardEntry[]> {
     rows.map(async (row: { member: string; score: number }) => {
       const meta = await redis!.hgetall<Record<string, string>>(`user:${row.member}`);
       return {
-        userId: row.member,
+        userId: typeof row.member === 'string' ? row.member : String(row.member),
         seconds: Math.max(0, -Math.floor(Number(row.score || 0))),
         name: meta?.name ? meta.name : null,
         email: meta?.email ? meta.email : null,

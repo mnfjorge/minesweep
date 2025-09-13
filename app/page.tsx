@@ -903,12 +903,13 @@ export default function MinesweeperPage() {
               {leaderboardLoading && <div className="ms-copy">Loading…</div>}
               {leaderboardError && <div className="ms-copy" style={{ color: '#b00020' }}>{leaderboardError}</div>}
               {!leaderboardLoading && !leaderboardError && (
-                leaderboardEntries.length > 0 ? (
+                Array.isArray(leaderboardEntries) && leaderboardEntries.length > 0 ? (
                   <ol style={{ listStyle: 'none', padding: 0, margin: 0 }}>
                     {leaderboardEntries.map((e, idx) => {
-                      const display = e.name || e.email || e.userId.slice(0, 6) + '…';
+                      const safeUserId = typeof e.userId === 'string' ? e.userId : String(e.userId ?? '');
+                      const display = e.name || e.email || (safeUserId ? safeUserId.slice(0, 6) + '…' : 'Unknown');
                       return (
-                        <li key={e.userId} style={{ display: 'grid', gridTemplateColumns: '40px 1fr auto', alignItems: 'center', gap: 8, padding: '6px 4px' }}>
+                        <li key={safeUserId || String(idx)} style={{ display: 'grid', gridTemplateColumns: '40px 1fr auto', alignItems: 'center', gap: 8, padding: '6px 4px' }}>
                           <span style={{ fontWeight: 800, textAlign: 'right' }}>{idx + 1}.</span>
                           <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{display}</span>
                           <span style={{ fontWeight: 700 }}>{formatSeconds(e.seconds)}</span>
