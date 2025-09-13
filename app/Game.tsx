@@ -178,9 +178,9 @@ export default function Game(props: {
       try {
         const raw = window.localStorage.getItem('ms_custom_mines_v1');
         const n = raw == null ? NaN : Number(raw);
-        if (Number.isFinite(n) && n >= 0) custom = Math.floor(n);
+        if (Number.isFinite(n) && n >= 1) custom = Math.floor(n);
       } catch {}
-      const mines = Math.max(0, Math.floor(custom));
+      const mines = Math.max(1, Math.floor(custom));
       return { rows, cols, mines };
     } else {
       const factor = difficultySaved === 'easy' ? 0.1 : difficultySaved === 'hard' ? 0.2 : 0.15;
@@ -214,7 +214,7 @@ export default function Game(props: {
     try {
       const raw = window.localStorage.getItem('ms_custom_mines_v1');
       const n = raw == null ? NaN : Number(raw);
-      if (Number.isFinite(n) && n >= 0) return Math.floor(n);
+      if (Number.isFinite(n) && n >= 1) return Math.floor(n);
     } catch {}
     return 10;
   });
@@ -254,7 +254,7 @@ export default function Game(props: {
   const computeMinesForDifficulty = useCallback(
     (totalCells: number, diff: Difficulty) => {
       if (diff === 'custom') {
-        return Math.max(0, Math.floor(customMines));
+        return Math.max(1, Math.floor(customMines));
       }
       const factor = diff === 'easy' ? 0.1 : diff === 'hard' ? 0.2 : 0.15;
       return Math.max(1, Math.floor(totalCells * factor));
@@ -302,7 +302,7 @@ export default function Game(props: {
   );
 
   const updateCustomMines = useCallback((n: number) => {
-    const sanitized = Number.isFinite(n) && n >= 0 ? Math.floor(n) : 0;
+    const sanitized = Number.isFinite(n) && n >= 1 ? Math.floor(n) : 1;
     setCustomMines(sanitized);
     try {
       if (typeof window !== 'undefined') {
