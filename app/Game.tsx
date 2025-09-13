@@ -22,11 +22,12 @@ type BoardConfig = {
   mines: number;
 };
 
-type Difficulty = 'easy' | 'normal' | 'hard';
+type RankableDifficulty = 'easy' | 'normal' | 'hard';
+type Difficulty = RankableDifficulty | 'custom';
 
 export default function Game(props: {
-  onSubmitRank: (args: { seconds: number; difficulty: Difficulty }) => Promise<unknown>;
-  fetchLeaderboard: () => Promise<{ easy: Array<{ userId: string; seconds: number; name: string | null; email: string | null }>; normal: Array<{ userId: string; seconds: number; name: string | null; email: string | null }>; hard: Array<{ userId: string; seconds: number; name: string | null; email: string | null }> }>;
+  onSubmitRank: (args: { seconds: number; difficulty: RankableDifficulty }) => Promise<unknown>;
+  fetchLeaderboard: () => Promise<{ easy: Array<{ userId: string; seconds: number; name: string | null; email: string | null }>; normal: Array<{ userId: string; seconds: number; name: string | null; email: string | null }>; hard: Array<{ userId: string; seconds: number; name: string | null; email: string | null }>; }>;
 }) {
   const { onSubmitRank, fetchLeaderboard } = props;
 
@@ -168,13 +169,24 @@ export default function Game(props: {
     let difficultySaved: Difficulty = 'normal';
     try {
       const saved = window.localStorage.getItem('ms_difficulty_v1');
-      if (saved === 'easy' || saved === 'normal' || saved === 'hard') {
-        difficultySaved = saved;
+      if (saved === 'easy' || saved === 'normal' || saved === 'hard' || saved === 'custom') {
+        difficultySaved = saved as Difficulty;
       }
     } catch {}
-    const factor = difficultySaved === 'easy' ? 0.1 : difficultySaved === 'hard' ? 0.2 : 0.15;
-    const mines = Math.max(1, Math.floor(total * factor));
-    return { rows, cols, mines };
+    if (difficultySaved === 'custom') {
+      let custom = 10;
+      try {
+        const raw = window.localStorage.getItem('ms_custom_mines_v1');
+        const n = raw == null ? NaN : Number(raw);
+        if (Number.isFinite(n) && n >= 0) custom = Math.floor(n);
+      } catch {}
+      const mines = Math.max(0, Math.floor(custom));
+      return { rows, cols, mines };
+    } else {
+      const factor = difficultySaved === 'easy' ? 0.1 : difficultySaved === 'hard' ? 0.2 : 0.15;
+      const mines = Math.max(1, Math.floor(total * factor));
+      return { rows, cols, mines };
+    }
   }, []);
 
   const track = (eventName: string, params?: Record<string, any>) => {
@@ -193,13 +205,23 @@ export default function Game(props: {
     if (typeof window === 'undefined') return 'normal';
     try {
       const saved = window.localStorage.getItem('ms_difficulty_v1');
-      if (saved === 'easy' || saved === 'normal' || saved === 'hard') return saved;
+      if (saved === 'easy' || saved === 'normal' || saved === 'hard' || saved === 'custom') return saved as Difficulty;
     } catch {}
     return 'normal';
+  });
+  const [customMines, setCustomMines] = useState<number>(() => {
+    if (typeof window === 'undefined') return 10;
+    try {
+      const raw = window.localStorage.getItem('ms_custom_mines_v1');
+      const n = raw == null ? NaN : Number(raw);
+      if (Number.isFinite(n) && n >= 0) return Math.floor(n);
+    } catch {}
+    return 10;
   });
   const [board, setBoard] = useState<Cell[][]>(() =>
     createEmptyBoard(config.rows, config.cols)
   );
+  const [actualMines, setActualMines] = useState<number>(config.mines);
   const [isFirstClick, setIsFirstClick] = useState<boolean>(true);
   const [gameOver, setGameOver] = useState<boolean>(false);
   const [isWin, setIsWin] = useState<boolean>(false);
@@ -228,13 +250,16 @@ export default function Game(props: {
     gameOverRef.current = gameOver;
   }, [gameOver]);
 
-  const minesRemaining = Math.max(config.mines - flagsPlaced, 0);
+  const minesRemaining = Math.max(actualMines - flagsPlaced, 0);
   const computeMinesForDifficulty = useCallback(
     (totalCells: number, diff: Difficulty) => {
+      if (diff === 'custom') {
+        return Math.max(0, Math.floor(customMines));
+      }
       const factor = diff === 'easy' ? 0.1 : diff === 'hard' ? 0.2 : 0.15;
       return Math.max(1, Math.floor(totalCells * factor));
     },
-    []
+    [customMines]
   );
 
   const reset = useCallback(
@@ -242,6 +267,7 @@ export default function Game(props: {
       const next = override ?? computeConfig();
       setConfig(next);
       setBoard(createEmptyBoard(next.rows, next.cols));
+      setActualMines(next.mines);
       setIsFirstClick(true);
       setGameOver(false);
       setIsWin(false);
@@ -269,10 +295,25 @@ export default function Game(props: {
       if (nextDifficulty === 'easy') track('difficulty_easy');
       else if (nextDifficulty === 'normal') track('difficulty_normal');
       else if (nextDifficulty === 'hard') track('difficulty_hard');
+      else if (nextDifficulty === 'custom') track('difficulty_custom');
       reset({ rows: config.rows, cols: config.cols, mines });
     },
     [computeMinesForDifficulty, config.cols, config.rows, reset]
   );
+
+  const updateCustomMines = useCallback((n: number) => {
+    const sanitized = Number.isFinite(n) && n >= 0 ? Math.floor(n) : 0;
+    setCustomMines(sanitized);
+    try {
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem('ms_custom_mines_v1', String(sanitized));
+      }
+    } catch {}
+  }, []);
+
+  const applyCustom = useCallback(() => {
+    applyDifficulty('custom');
+  }, [applyDifficulty]);
 
   useEffect(() => {
     const onResize = () => {
@@ -389,7 +430,7 @@ export default function Game(props: {
           }
         }
         setBoard(clone);
-        setFlagsPlaced(config.mines);
+        setFlagsPlaced(mines);
         track('win', {
           seconds,
           rows: config.rows,
@@ -402,16 +443,16 @@ export default function Game(props: {
           saveLocalBest({ seconds, difficulty });
         } catch {}
         try {
-          if (status === 'authenticated') {
+          if (status === 'authenticated' && difficulty !== 'custom') {
             if (!(window as any)._rankSubmitted) {
               (window as any)._rankSubmitted = true;
-              onSubmitRank({ seconds, difficulty }).catch(() => { alert('Ranking not saved') });
+              onSubmitRank({ seconds, difficulty: difficulty as RankableDifficulty }).catch(() => { alert('Ranking not saved') });
             }
           }
         } catch {}
       }
     },
-    [config.mines, status, seconds, onSubmitRank, saveLocalBest]
+    [config.mines, status, seconds, onSubmitRank, saveLocalBest, difficulty]
   );
 
   const revealCell = useCallback(
@@ -421,6 +462,14 @@ export default function Game(props: {
 
       if (isFirstClick) {
         placeMines(newBoard, r, c, config.mines);
+        // Count actual mines placed (can be less than requested if not enough available cells)
+        let placed = 0;
+        for (let rr = 0; rr < newBoard.length; rr++) {
+          for (let cc = 0; cc < newBoard[0].length; cc++) {
+            if (newBoard[rr][cc].isMine) placed++;
+          }
+        }
+        setActualMines(placed);
         setIsFirstClick(false);
         startTimer();
         track('game_start', {
@@ -786,6 +835,9 @@ export default function Game(props: {
         onClose={() => setIsSettingsOpen(false)}
         difficulty={difficulty}
         applyDifficulty={applyDifficulty}
+        customMines={customMines}
+        onChangeCustomMines={(n) => updateCustomMines(n)}
+        applyCustom={applyCustom}
         onTrack={(e) => track(e)}
       />
 

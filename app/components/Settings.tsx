@@ -2,7 +2,7 @@
 
 import { signIn, signOut, useSession } from "next-auth/react";
 
-export type Difficulty = "easy" | "normal" | "hard";
+export type Difficulty = "easy" | "normal" | "hard" | "custom";
 
 export default function Settings(props: {
   isOpen: boolean;
@@ -11,9 +11,12 @@ export default function Settings(props: {
   onClose: () => void;
   difficulty: Difficulty;
   applyDifficulty: (d: Difficulty) => void;
+  customMines: number;
+  onChangeCustomMines: (n: number) => void;
+  applyCustom: () => void;
   onTrack?: (eventName: string) => void;
 }) {
-  const { isOpen, activeTab, onChangeTab, onClose, difficulty, applyDifficulty, onTrack } = props;
+  const { isOpen, activeTab, onChangeTab, onClose, difficulty, applyDifficulty, customMines, onChangeCustomMines, applyCustom, onTrack } = props;
   const { data: session, status } = useSession();
 
   if (!isOpen) return null;
@@ -75,7 +78,30 @@ export default function Settings(props: {
                 />
                 <span>Hard</span>
               </label>
+              <label className="ms-radio" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <input
+                  type="radio"
+                  name="difficulty"
+                  value="custom"
+                  checked={difficulty === "custom"}
+                  onChange={() => applyCustom()}
+                />
+                <span>Custom</span>
+                <input
+                  type="number"
+                  min={0}
+                  step={1}
+                  value={Number.isFinite(customMines) ? customMines : 0}
+                  onChange={(e: any) => { onChangeCustomMines(Math.max(0, Math.floor(Number(e.target.value)))); if (difficulty === "custom") applyCustom(); }}
+                  aria-label="Custom bombs count"
+                  style={{ width: 96 }}
+                />
+                <span style={{ opacity: 0.8 }}>
+                  bombs
+                </span>
+              </label>
             </div>
+            <div className="ms-hint">Custom games do not save to leaderboard.</div>
             <div className="ms-hint">Changes apply immediately and restart the board.</div>
           </div>
         )}
