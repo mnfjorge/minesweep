@@ -89,10 +89,10 @@ export default function Settings(props: {
                 <span>Custom</span>
                 <input
                   type="number"
-                  min={0}
+                  min={1}
                   step={1}
-                  value={Number.isFinite(customMines) ? customMines : 0}
-                  onChange={(e: any) => { onChangeCustomMines(Math.max(0, Math.floor(Number(e.target.value)))); if (difficulty === "custom") applyCustom(); }}
+                  value={Number.isFinite(customMines) ? Math.max(1, customMines) : 1}
+                  onChange={(e: any) => { onChangeCustomMines(Math.max(1, Math.floor(Number(e.target.value)))); if (difficulty === "custom") applyCustom(); }}
                   aria-label="Custom bombs count"
                   style={{ width: 96 }}
                 />
