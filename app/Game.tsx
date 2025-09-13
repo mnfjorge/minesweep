@@ -155,11 +155,12 @@ export default function Game(props: {
   const computeConfig = useCallback((): BoardConfig => {
     if (typeof window === 'undefined') return { rows: 9, cols: 9, mines: 10, cellSize: BASE_CELL_SIZE };
     const frameExtra = 4;
+    // Prefer the dynamic visual viewport height to avoid mobile browser UI creating gaps
+    const vvh = (window.visualViewport && typeof window.visualViewport.height === 'number')
+      ? window.visualViewport.height
+      : window.innerHeight;
     const availableWidth = Math.max(1, window.innerWidth - PADDING * 2);
-    const availableHeight = Math.max(
-      1,
-      window.innerHeight - panelHeight - PADDING * 2
-    );
+    const availableHeight = Math.max(1, vvh - panelHeight - PADDING * 2);
     // Start with an approximate grid based on the base size
     const approxCols = Math.max(5, Math.round((availableWidth - frameExtra) / BASE_CELL_SIZE));
     const approxRows = Math.max(5, Math.round((availableHeight - frameExtra) / BASE_CELL_SIZE));
@@ -807,7 +808,7 @@ export default function Game(props: {
   return (
     <div
       className="h-screen w-screen overflow-hidden select-none flex flex-col items-center justify-start bg-[#bdbdbd]"
-      style={{ ['--ms-cell-size' as any]: `${config.cellSize}px` }}
+      style={{ ['--ms-cell-size' as any]: `${config.cellSize}px`, height: '100dvh', width: '100vw' }}
     >
       <div className="w-full max-w-full flex justify-center">
         <div
