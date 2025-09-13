@@ -11,7 +11,6 @@ type Cell = {
 
 export default function Board(props: {
   board: Cell[][];
-  boardWidth: number;
   gridTemplate: Record<string, string>;
   onContextMenu: (e: MouseEvent) => void;
   onCellMouseDown: (e: MouseEvent, r: number, c: number) => void;
@@ -25,7 +24,6 @@ export default function Board(props: {
 }) {
   const {
     board,
-    boardWidth,
     gridTemplate,
     onContextMenu,
     onCellMouseDown,
@@ -42,7 +40,7 @@ export default function Board(props: {
     <div className="w-full h-full flex items-start justify-center">
       <div
         className="ms-board"
-        style={{ ...gridTemplate, width: boardWidth }}
+        style={{ ...gridTemplate }}
         onContextMenu={onContextMenu as any}
       >
         {board.map((row: Cell[], r: number) =>

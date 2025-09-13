@@ -20,6 +20,7 @@ type BoardConfig = {
   rows: number;
   cols: number;
   mines: number;
+  cellSize: number;
 };
 
 type RankableDifficulty = 'easy' | 'normal' | 'hard';
@@ -145,26 +146,43 @@ export default function Game(props: {
   }
 
   // Sizing constants resembling classic Minesweeper
-  const CELL_SIZE = 32; // px (bigger tiles like the reference)
-  const HEADER_HEIGHT = 64; // px
+  const BASE_CELL_SIZE = 32; // px target; will adjust to fit viewport
+  const DEFAULT_PANEL_HEIGHT = 64; // px fallback before measurement
   const PADDING = 0; // remove external padding around the board
+  const panelRef = useRef<HTMLDivElement | null>(null);
+  const [panelHeight, setPanelHeight] = useState<number>(DEFAULT_PANEL_HEIGHT);
 
   const computeConfig = useCallback((): BoardConfig => {
-    if (typeof window === 'undefined') return { rows: 9, cols: 9, mines: 10 };
+    if (typeof window === 'undefined') return { rows: 9, cols: 9, mines: 10, cellSize: BASE_CELL_SIZE };
     const frameExtra = 4;
     const availableWidth = Math.max(1, window.innerWidth - PADDING * 2);
     const availableHeight = Math.max(
       1,
-      window.innerHeight - HEADER_HEIGHT - PADDING * 2
+      window.innerHeight - panelHeight - PADDING * 2
     );
-    const cols = Math.max(
-      5,
-      Math.floor((availableWidth - frameExtra) / CELL_SIZE)
-    );
-    const rows = Math.max(
-      5,
-      Math.floor((availableHeight - frameExtra) / CELL_SIZE) - 1
-    );
+    // Start with an approximate grid based on the base size
+    const approxCols = Math.max(5, Math.round((availableWidth - frameExtra) / BASE_CELL_SIZE));
+    const approxRows = Math.max(5, Math.round((availableHeight - frameExtra) / BASE_CELL_SIZE));
+    // Compute sizes that would fit exactly in either dimension
+    const sizeToFitWidth = (availableWidth - frameExtra) / approxCols;
+    const sizeToFitHeight = (availableHeight - frameExtra) / approxRows;
+    // Choose limiting dimension to eliminate gap on that axis
+    let cellSize: number;
+    let cols: number;
+    let rows: number;
+    if (sizeToFitWidth <= sizeToFitHeight) {
+      cellSize = sizeToFitWidth;
+      cols = approxCols;
+      rows = Math.max(5, Math.floor((availableHeight - frameExtra) / cellSize));
+    } else {
+      cellSize = sizeToFitHeight;
+      rows = approxRows;
+      cols = Math.max(5, Math.floor((availableWidth - frameExtra) / cellSize));
+    }
+    // After fixing rows/cols, adjust cellSize once more to match the chosen limiting axis exactly
+    const widthFit = (availableWidth - frameExtra) / cols;
+    const heightFit = (availableHeight - frameExtra) / rows;
+    cellSize = Math.min(widthFit, heightFit);
     const total = rows * cols;
     let difficultySaved: Difficulty = 'normal';
     try {
@@ -181,13 +199,13 @@ export default function Game(props: {
         if (Number.isFinite(n) && n >= 1) custom = Math.floor(n);
       } catch {}
       const mines = Math.max(1, Math.floor(custom));
-      return { rows, cols, mines };
+      return { rows, cols, mines, cellSize };
     } else {
       const factor = difficultySaved === 'easy' ? 0.1 : difficultySaved === 'hard' ? 0.2 : 0.15;
       const mines = Math.max(1, Math.floor(total * factor));
-      return { rows, cols, mines };
+      return { rows, cols, mines, cellSize };
     }
-  }, []);
+  }, [panelHeight]);
 
   const track = (eventName: string, params?: Record<string, any>) => {
     try {
@@ -296,7 +314,7 @@ export default function Game(props: {
       else if (nextDifficulty === 'normal') track('difficulty_normal');
       else if (nextDifficulty === 'hard') track('difficulty_hard');
       else if (nextDifficulty === 'custom') track('difficulty_custom');
-      reset({ rows: config.rows, cols: config.cols, mines });
+      reset({ rows: config.rows, cols: config.cols, mines, cellSize: config.cellSize });
     },
     [computeMinesForDifficulty, config.cols, config.rows, reset]
   );
@@ -316,17 +334,33 @@ export default function Game(props: {
   }, [applyDifficulty]);
 
   useEffect(() => {
+    const measurePanel = () => {
+      try {
+        const h = panelRef.current ? panelRef.current.offsetHeight : DEFAULT_PANEL_HEIGHT;
+        setPanelHeight(h || DEFAULT_PANEL_HEIGHT);
+      } catch {}
+    };
     const onResize = () => {
+      measurePanel();
       if (!isFirstClickRef.current) return;
       const next = computeConfig();
       reset(next);
     };
+    // Initial measure
+    measurePanel();
     window.addEventListener('resize', onResize);
     return () => {
       window.removeEventListener('resize', onResize);
       if (timerRef.current) clearInterval(timerRef.current);
     };
   }, []);
+
+  useEffect(() => {
+    // Recompute layout when the measured panel height changes while game hasn't started
+    if (!isFirstClickRef.current) return;
+    const next = computeConfig();
+    reset(next);
+  }, [panelHeight, computeConfig, reset]);
 
   const startTimer = useCallback(() => {
     if (timerRef.current) return;
@@ -715,11 +749,12 @@ export default function Game(props: {
   const gridTemplate = useMemo(
     () => ({
       gridTemplateColumns: `repeat(${config.cols}, var(--ms-cell-size))`,
+      gridTemplateRows: `repeat(${config.rows}, var(--ms-cell-size))`,
     }),
-    [config.cols]
+    [config.cols, config.rows]
   );
 
-  const boardWidth = useMemo(() => config.cols * CELL_SIZE, [config.cols]);
+  const boardWidth = useMemo(() => config.cols * config.cellSize, [config.cols, config.cellSize]);
 
   const numberClass = (n: number) => {
     if (n <= 0) return '';
@@ -787,12 +822,13 @@ export default function Game(props: {
   return (
     <div
       className="h-screen w-screen overflow-hidden select-none flex flex-col items-center justify-start bg-[#bdbdbd]"
-      style={{ ['--ms-cell-size' as any]: `${CELL_SIZE}px` }}
+      style={{ ['--ms-cell-size' as any]: `${config.cellSize}px` }}
     >
       <div className="w-full max-w-full flex justify-center">
         <div
           className="ms-panel"
           style={{ width: boardWidth + 2, marginLeft: '2px' }}
+          ref={panelRef as any}
         >
           <div className="ms-led">
             <SevenSegment value={minesRemaining} />
@@ -851,7 +887,6 @@ export default function Game(props: {
 
       <Board
         board={board}
-        boardWidth={boardWidth}
         gridTemplate={gridTemplate}
         onContextMenu={onContextMenu as any}
         onCellMouseDown={(e, r, c) => onCellMouseDown(e, r, c)}
