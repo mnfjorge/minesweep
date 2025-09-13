@@ -220,6 +220,7 @@ export default function MinesweeperPage() {
     normal: LeaderboardEntry[];
     hard: LeaderboardEntry[];
   } | null>(null);
+  const [leaderboardActiveDifficulty, setLeaderboardActiveDifficulty] = useState<'easy' | 'normal' | 'hard'>(() => 'normal');
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const longPressTriggeredRef = useRef<boolean>(false);
@@ -714,6 +715,7 @@ export default function MinesweeperPage() {
 
   useEffect(() => {
     if (!isLeaderboardOpen) return;
+    setLeaderboardActiveDifficulty(difficulty);
     let aborted = false;
     setLeaderboardLoading(true);
     setLeaderboardError(null);
@@ -728,8 +730,6 @@ export default function MinesweeperPage() {
             ? (data.entriesByDifficulty as { easy: LeaderboardEntry[]; normal: LeaderboardEntry[]; hard: LeaderboardEntry[] })
             : { easy: [], normal: [], hard: [] };
           setLeaderboardByDifficulty(byDiff);
-          const list = difficulty === 'easy' ? byDiff.easy : difficulty === 'hard' ? byDiff.hard : byDiff.normal;
-          setLeaderboardEntries(Array.isArray(list) ? list : []);
         }
       })
       .catch((e: unknown) => {
@@ -746,9 +746,9 @@ export default function MinesweeperPage() {
 
   useEffect(() => {
     if (!leaderboardByDifficulty) return;
-    const list = difficulty === 'easy' ? leaderboardByDifficulty.easy : difficulty === 'hard' ? leaderboardByDifficulty.hard : leaderboardByDifficulty.normal;
+    const list = leaderboardActiveDifficulty === 'easy' ? leaderboardByDifficulty.easy : leaderboardActiveDifficulty === 'hard' ? leaderboardByDifficulty.hard : leaderboardByDifficulty.normal;
     setLeaderboardEntries(Array.isArray(list) ? list : []);
-  }, [leaderboardByDifficulty, difficulty]);
+  }, [leaderboardByDifficulty, leaderboardActiveDifficulty]);
 
   return (
     <div
@@ -913,10 +913,33 @@ export default function MinesweeperPage() {
       {isLeaderboardOpen && (
         <div className="ms-modal-overlay" role="dialog" aria-modal="true">
           <div className="ms-modal" role="document">
-            <div className="ms-tabs">
+            <div className="ms-tabs" style={{ gap: 4 }}>
               <button className="ms-tab" aria-selected={true}>
-                🏆 Top 10 — {difficulty[0].toUpperCase() + difficulty.slice(1)}
+                🏆 Top 10
               </button>
+              <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <button
+                  className={`ms-tab ${leaderboardActiveDifficulty === 'easy' ? 'ms-tab-active' : ''}`}
+                  onClick={() => setLeaderboardActiveDifficulty('easy')}
+                  aria-pressed={leaderboardActiveDifficulty === 'easy'}
+                >
+                  Easy
+                </button>
+                <button
+                  className={`ms-tab ${leaderboardActiveDifficulty === 'normal' ? 'ms-tab-active' : ''}`}
+                  onClick={() => setLeaderboardActiveDifficulty('normal')}
+                  aria-pressed={leaderboardActiveDifficulty === 'normal'}
+                >
+                  Normal
+                </button>
+                <button
+                  className={`ms-tab ${leaderboardActiveDifficulty === 'hard' ? 'ms-tab-active' : ''}`}
+                  onClick={() => setLeaderboardActiveDifficulty('hard')}
+                  aria-pressed={leaderboardActiveDifficulty === 'hard'}
+                >
+                  Hard
+                </button>
+              </div>
               <button
                 className="ms-tab ms-tab-right"
                 onClick={() => setIsLeaderboardOpen(false)}
