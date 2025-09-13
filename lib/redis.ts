@@ -35,9 +35,16 @@ export async function updateLeaderboardTop10(payload: RankUpdatePayload) {
   const score = -Math.max(0, Math.floor(payload.seconds));
   // Store basic user metadata for display purposes
   try {
+    const sanitize = (value: unknown): string => {
+      if (typeof value !== 'string') return '';
+      const trimmed = value.trim();
+      const lower = trimmed.toLowerCase();
+      if (!trimmed || lower === 'undefined' || lower === 'null') return '';
+      return trimmed;
+    };
     await redis.hset(`user:${member}`, {
-      name: payload.name ?? '',
-      email: payload.email ?? '',
+      name: sanitize(payload.name),
+      email: sanitize(payload.email),
     });
   } catch {}
 
@@ -66,21 +73,46 @@ export type LeaderboardEntry = {
 export async function fetchLeaderboardTop10(): Promise<LeaderboardEntry[]> {
   if (!redis) return [];
   // Top 10 highest scores (i.e., least seconds)
+  // Fetch extra in case we filter out invalid members
   const rows = await redis.zrange<Array<{ member: string; score: number }>>(
     LEADERBOARD_KEY,
     0,
-    9,
+    49,
     { rev: true, withScores: true }
   );
 
+  const invalidMembers: string[] = [];
+  const cleaned = rows.filter((row) => {
+    const memberStr = String((row as any)?.member ?? '').trim().toLowerCase();
+    if (!memberStr || memberStr === 'undefined' || memberStr === 'null' || memberStr === 'unknown') {
+      const original = String((row as any)?.member ?? '').trim();
+      if (original) invalidMembers.push(original);
+      return false;
+    }
+    return true;
+  });
+
+  if (invalidMembers.length > 0) {
+    try {
+      await (redis as any).zrem(LEADERBOARD_KEY, ...invalidMembers);
+    } catch {}
+  }
+
   const results = await Promise.all(
-    rows.map(async (row: { member: string; score: number }) => {
+    cleaned.slice(0, 10).map(async (row: { member: string; score: number }) => {
       const meta = await redis!.hgetall<Record<string, string>>(`user:${row.member}`);
+      const sanitizeToNull = (value: unknown): string | null => {
+        if (typeof value !== 'string') return null;
+        const trimmed = value.trim();
+        const lower = trimmed.toLowerCase();
+        if (!trimmed || lower === 'undefined' || lower === 'null') return null;
+        return trimmed;
+      };
       return {
         userId: typeof row.member === 'string' ? row.member : String(row.member),
         seconds: Math.max(0, -Math.floor(Number(row.score || 0))),
-        name: meta?.name ? meta.name : null,
-        email: meta?.email ? meta.email : null,
+        name: sanitizeToNull(meta?.name),
+        email: sanitizeToNull(meta?.email),
       } as LeaderboardEntry;
     })
   );
