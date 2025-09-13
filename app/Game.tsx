@@ -337,21 +337,36 @@ export default function Game(props: {
   useEffect(() => {
     const measurePanel = () => {
       try {
-        const h = panelRef.current ? panelRef.current.offsetHeight : DEFAULT_PANEL_HEIGHT;
+        const el = panelRef.current;
+        const h = el ? Math.round(el.getBoundingClientRect().height) : DEFAULT_PANEL_HEIGHT;
         setPanelHeight(h || DEFAULT_PANEL_HEIGHT);
       } catch {}
     };
+
     const onResize = () => {
       measurePanel();
       if (!isFirstClickRef.current) return;
       const next = computeConfig();
       reset(next);
     };
+
+    // Observe header size changes directly (fonts, dynamic UI, orientation)
+    let ro: ResizeObserver | null = null;
+    try {
+      if (typeof ResizeObserver !== 'undefined' && panelRef.current) {
+        ro = new ResizeObserver(() => {
+          measurePanel();
+        });
+        ro.observe(panelRef.current);
+      }
+    } catch {}
+
     // Initial measure
     measurePanel();
     window.addEventListener('resize', onResize);
     return () => {
       window.removeEventListener('resize', onResize);
+      try { ro && ro.disconnect(); } catch {}
       if (timerRef.current) clearInterval(timerRef.current);
     };
   }, []);
