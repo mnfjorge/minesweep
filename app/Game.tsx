@@ -294,6 +294,76 @@ export default function Game(props: {
     }, 1000);
   }, []);
 
+  // Local best score persistence (per difficulty) with name capture
+  const saveLocalBest = useCallback(
+    (args: { seconds: number; difficulty: Difficulty }) => {
+      try {
+        if (typeof window === 'undefined') return;
+
+        const BEST_KEY = 'ms_best_v1';
+        const NAME_KEY = 'ms_player_name_v1';
+
+        // Load current bests
+        let bestAll: any = null;
+        try {
+          const raw = window.localStorage.getItem(BEST_KEY);
+          if (raw) bestAll = JSON.parse(raw);
+        } catch {}
+        if (!bestAll || typeof bestAll !== 'object') bestAll = {};
+
+        const firstNonEmpty = (...values: Array<unknown>): string => {
+          for (const v of values) {
+            if (typeof v === 'string') {
+              const t = v.trim();
+              if (t && t.toLowerCase() !== 'undefined' && t.toLowerCase() !== 'null') return t;
+            }
+          }
+          return '';
+        };
+
+        let candidateName = '';
+        let storedName = '';
+        try {
+          storedName = String(window.localStorage.getItem(NAME_KEY) || '').trim();
+        } catch {}
+
+        candidateName = firstNonEmpty(
+          storedName,
+          (session?.user?.name as any) as string,
+          (session?.user?.email as any) as string
+        );
+
+        if (!candidateName) {
+          try {
+            const input = window.prompt('Enter your name to save your best score:', '');
+            const sanitized = typeof input === 'string' ? input.trim().slice(0, 40) : '';
+            if (sanitized) {
+              candidateName = sanitized;
+              try { window.localStorage.setItem(NAME_KEY, candidateName); } catch {}
+            }
+          } catch {}
+        }
+
+        if (!candidateName) candidateName = 'Player';
+
+        const prev = bestAll[args.difficulty];
+        const isBetter = !prev || typeof prev.seconds !== 'number' || args.seconds < prev.seconds;
+        if (isBetter) {
+          bestAll[args.difficulty] = {
+            name: candidateName,
+            seconds: Math.max(0, Math.floor(args.seconds)),
+            updatedAt: new Date().toISOString(),
+          };
+          try {
+            window.localStorage.setItem(BEST_KEY, JSON.stringify(bestAll));
+          } catch {}
+          track('local_best_updated', { difficulty: args.difficulty, seconds: args.seconds });
+        }
+      } catch {}
+    },
+    [session]
+  );
+
   const checkWin = useCallback(
     (b: Cell[][]) => {
       let revealed = 0;
@@ -327,6 +397,10 @@ export default function Game(props: {
           mines: config.mines,
           difficulty,
         });
+        // Save best score locally with name
+        try {
+          saveLocalBest({ seconds, difficulty });
+        } catch {}
         try {
           if (status === 'authenticated') {
             if (!(window as any)._rankSubmitted) {
@@ -337,7 +411,7 @@ export default function Game(props: {
         } catch {}
       }
     },
-    [config.mines, status, seconds, onSubmitRank]
+    [config.mines, status, seconds, onSubmitRank, saveLocalBest]
   );
 
   const revealCell = useCallback(
