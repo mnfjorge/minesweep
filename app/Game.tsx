@@ -207,13 +207,6 @@ export default function Game(props: {
   const [seconds, setSeconds] = useState<number>(0);
   const [tool, setTool] = useState<'reveal' | 'flag'>('reveal');
   const [isLeaderboardOpen, setIsLeaderboardOpen] = useState<boolean>(false);
-  const [leaderboardLoading, setLeaderboardLoading] = useState<boolean>(false);
-  const [leaderboardError, setLeaderboardError] = useState<string | null>(null);
-  const [leaderboardEntries, setLeaderboardEntries] = useState<{
-    easy: Array<{ userId: string; seconds: number; name: string | null; email: string | null }>;
-    normal: Array<{ userId: string; seconds: number; name: string | null; email: string | null }>;
-    hard: Array<{ userId: string; seconds: number; name: string | null; email: string | null }>;
-  }>({ easy: [], normal: [], hard: [] });
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const longPressTriggeredRef = useRef<boolean>(false);
@@ -666,31 +659,7 @@ export default function Game(props: {
     return `${m}m ${s}s`;
   };
 
-  useEffect(() => {
-    if (!isLeaderboardOpen) return;
-    track('open_ranking');
-    let aborted = false;
-    setLeaderboardLoading(true);
-    setLeaderboardError(null);
-    fetchLeaderboard()
-      .then((data) => {
-        if (!aborted) setLeaderboardEntries({
-          easy: Array.isArray(data.easy) ? data.easy : [],
-          normal: Array.isArray(data.normal) ? data.normal : [],
-          hard: Array.isArray(data.hard) ? data.hard : [],
-        });
-      })
-      .catch((e: unknown) => {
-        const message = e instanceof Error ? e.message : 'Failed to load';
-        if (!aborted) setLeaderboardError(message);
-      })
-      .finally(() => {
-        if (!aborted) setLeaderboardLoading(false);
-      });
-    return () => {
-      aborted = true;
-    };
-  }, [isLeaderboardOpen, fetchLeaderboard]);
+  // Ranking modal handles its own fetch on open
 
   return (
     <div
