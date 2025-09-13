@@ -316,9 +316,24 @@ export default function MinesweeperPage() {
         }
         setBoard(clone);
         setFlagsPlaced(config.mines);
+        // Background: if authenticated, record result for ranking
+        try {
+          if (status === 'authenticated') {
+            // Avoid duplicate submissions: only send once per win
+            if (!(window as any)._rankSubmitted) {
+              (window as any)._rankSubmitted = true;
+              fetch('/api/rank', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ seconds }),
+                keepalive: true,
+              }).catch(() => {});
+            }
+          }
+        } catch {}
       }
     },
-    [config.mines]
+    [config.mines, status, seconds]
   );
 
   const revealCell = useCallback(
