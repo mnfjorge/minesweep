@@ -216,6 +216,7 @@ body {
   -webkit-tap-highlight-color: transparent;
   -webkit-touch-callout: none;
   touch-action: manipulation;
+  box-sizing: border-box;
 }
 
 /* Raised unrevealed cell */
