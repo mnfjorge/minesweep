@@ -204,6 +204,10 @@ export default function MinesweeperPage() {
   const [flagsPlaced, setFlagsPlaced] = useState<number>(0);
   const [seconds, setSeconds] = useState<number>(0);
   const [tool, setTool] = useState<'reveal' | 'flag'>('reveal');
+  const [isLeaderboardOpen, setIsLeaderboardOpen] = useState<boolean>(false);
+  const [leaderboardLoading, setLeaderboardLoading] = useState<boolean>(false);
+  const [leaderboardError, setLeaderboardError] = useState<string | null>(null);
+  const [leaderboardEntries, setLeaderboardEntries] = useState<Array<{ userId: string; seconds: number; name: string | null; email: string | null }>>([]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const longPressTriggeredRef = useRef<boolean>(false);
@@ -688,6 +692,37 @@ export default function MinesweeperPage() {
     );
   };
 
+  const formatSeconds = (total: number) => {
+    const clamped = Math.max(0, Math.floor(total));
+    const m = Math.floor(clamped / 60);
+    const s = clamped % 60;
+    if (m <= 0) return `${s}s`;
+    return `${m}m ${s}s`;
+  };
+
+  useEffect(() => {
+    if (!isLeaderboardOpen) return;
+    let aborted = false;
+    setLeaderboardLoading(true);
+    setLeaderboardError(null);
+    fetch('/api/rank', { method: 'GET', cache: 'no-store' })
+      .then(async (r: Response) => {
+        if (!r.ok) throw new Error('Failed to load leaderboard');
+        const data = await r.json().catch(() => ({ entries: [] as Array<{ userId: string; seconds: number; name: string | null; email: string | null }> }));
+        if (!aborted) setLeaderboardEntries(Array.isArray(data.entries) ? (data.entries as Array<{ userId: string; seconds: number; name: string | null; email: string | null }>) : []);
+      })
+      .catch((e: unknown) => {
+        const message = e instanceof Error ? e.message : 'Failed to load';
+        if (!aborted) setLeaderboardError(message);
+      })
+      .finally(() => {
+        if (!aborted) setLeaderboardLoading(false);
+      });
+    return () => {
+      aborted = true;
+    };
+  }, [isLeaderboardOpen]);
+
   return (
     <div
       className="h-screen w-screen overflow-hidden select-none flex flex-col items-center justify-start bg-[#bdbdbd]"
@@ -712,13 +747,24 @@ export default function MinesweeperPage() {
           >
             ⚙️
           </button>
-          <button
-            className="ms-smiley"
-            onClick={() => reset()}
-            aria-label="reset"
-          >
-            {gameOver ? (isWin ? '😎' : '😵') : '😊'}
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+            <button
+              className="ms-smiley"
+              onClick={() => reset()}
+              aria-label="reset"
+            >
+              {gameOver ? (isWin ? '😎' : '😵') : '😊'}
+            </button>
+            <button
+              className="ms-tool"
+              onClick={() => setIsLeaderboardOpen(true)}
+              aria-label="open-leaderboard"
+              title="Leaderboard"
+              style={{ width: 36, height: 36 }}
+            >
+              🏆
+            </button>
+          </div>
           <button
             className={`ms-tool ${tool === 'flag' ? 'ms-tool-active' : ''}`}
             onClick={() => setTool(tool === 'flag' ? 'reveal' : 'flag')}
@@ -834,6 +880,49 @@ export default function MinesweeperPage() {
             )}
           </div>
           <button className="ms-modal-backdrop" aria-hidden="true" onClick={() => setIsSettingsOpen(false)} />
+        </div>
+      )}
+
+      {isLeaderboardOpen && (
+        <div className="ms-modal-overlay" role="dialog" aria-modal="true">
+          <div className="ms-modal" role="document">
+            <div className="ms-tabs">
+              <button className="ms-tab" aria-selected={true}>
+                🏆 Top 10
+              </button>
+              <button
+                className="ms-tab ms-tab-right"
+                onClick={() => setIsLeaderboardOpen(false)}
+                aria-label="close-leaderboard"
+                title="Close"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="ms-modal-section">
+              {leaderboardLoading && <div className="ms-copy">Loading…</div>}
+              {leaderboardError && <div className="ms-copy" style={{ color: '#b00020' }}>{leaderboardError}</div>}
+              {!leaderboardLoading && !leaderboardError && (
+                leaderboardEntries.length > 0 ? (
+                  <ol style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                    {leaderboardEntries.map((e, idx) => {
+                      const display = e.name || e.email || e.userId.slice(0, 6) + '…';
+                      return (
+                        <li key={e.userId} style={{ display: 'grid', gridTemplateColumns: '40px 1fr auto', alignItems: 'center', gap: 8, padding: '6px 4px' }}>
+                          <span style={{ fontWeight: 800, textAlign: 'right' }}>{idx + 1}.</span>
+                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{display}</span>
+                          <span style={{ fontWeight: 700 }}>{formatSeconds(e.seconds)}</span>
+                        </li>
+                      );
+                    })}
+                  </ol>
+                ) : (
+                  <div className="ms-copy">No results yet. Be the first to win!</div>
+                )
+              )}
+            </div>
+          </div>
+          <button className="ms-modal-backdrop" aria-hidden="true" onClick={() => setIsLeaderboardOpen(false)} />
         </div>
       )}
 

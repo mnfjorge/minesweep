@@ -73,7 +73,7 @@ export async function fetchLeaderboardTop10(): Promise<LeaderboardEntry[]> {
   );
 
   const results = await Promise.all(
-    rows.map(async (row) => {
+    rows.map(async (row: { member: string; score: number }) => {
       const meta = await redis!.hgetall<Record<string, string>>(`user:${row.member}`);
       return {
         userId: row.member,
