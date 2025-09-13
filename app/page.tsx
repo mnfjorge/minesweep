@@ -184,6 +184,15 @@ export default function MinesweeperPage() {
     return { rows, cols, mines };
   }, []);
 
+  const track = (eventName: string, params?: Record<string, any>) => {
+    try {
+      if (typeof window === 'undefined') return;
+      const gtag = (window as any).gtag as undefined | ((...args: any[]) => void);
+      if (typeof gtag !== 'function') return;
+      gtag('event', eventName, { ...params, send_to: 'G-XFBE0FWT1T' });
+    } catch {}
+  };
+
   const [config, setConfig] = useState<BoardConfig>(() => computeConfig());
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<'settings' | 'account'>('settings');
@@ -267,6 +276,10 @@ export default function MinesweeperPage() {
           window.localStorage.setItem('ms_difficulty_v1', nextDifficulty);
         }
       } catch {}
+      // Track per-difficulty change as separate events
+      if (nextDifficulty === 'easy') track('difficulty_easy');
+      else if (nextDifficulty === 'normal') track('difficulty_normal');
+      else if (nextDifficulty === 'hard') track('difficulty_hard');
       reset({ rows: config.rows, cols: config.cols, mines });
     },
     [computeMinesForDifficulty, config.cols, config.rows, reset]
@@ -320,6 +333,14 @@ export default function MinesweeperPage() {
         }
         setBoard(clone);
         setFlagsPlaced(config.mines);
+        // Track win event
+        track('win', {
+          seconds,
+          rows: config.rows,
+          cols: config.cols,
+          mines: config.mines,
+          difficulty,
+        });
         // Background: if authenticated, record result for ranking
         try {
           if (status === 'authenticated') {
@@ -349,6 +370,13 @@ export default function MinesweeperPage() {
         placeMines(newBoard, r, c, config.mines);
         setIsFirstClick(false);
         startTimer();
+        // Track first game start on first reveal
+        track('game_start', {
+          rows: config.rows,
+          cols: config.cols,
+          mines: config.mines,
+          difficulty,
+        });
       }
 
       const cell = newBoard[r][c];
@@ -368,6 +396,14 @@ export default function MinesweeperPage() {
           clearInterval(timerRef.current);
           timerRef.current = null;
         }
+        // Track loss event
+        track('loss', {
+          seconds,
+          rows: config.rows,
+          cols: config.cols,
+          mines: config.mines,
+          difficulty,
+        });
         return;
       }
 
@@ -459,6 +495,14 @@ export default function MinesweeperPage() {
           clearInterval(timerRef.current);
           timerRef.current = null;
         }
+        // Track loss on chord reveal
+        track('loss', {
+          seconds,
+          rows: config.rows,
+          cols: config.cols,
+          mines: config.mines,
+          difficulty,
+        });
         return;
       }
       setBoard(newBoard);
@@ -702,6 +746,8 @@ export default function MinesweeperPage() {
 
   useEffect(() => {
     if (!isLeaderboardOpen) return;
+    // Track ranking modal open
+    track('open_ranking');
     let aborted = false;
     setLeaderboardLoading(true);
     setLeaderboardError(null);
@@ -741,6 +787,8 @@ export default function MinesweeperPage() {
             onClick={() => {
               setActiveTab('settings');
               setIsSettingsOpen(true);
+              // Track settings button open
+              track('open_settings');
             }}
             aria-label="open-settings"
             style={{ width: 36, height: 36 }}
@@ -757,7 +805,7 @@ export default function MinesweeperPage() {
             </button>
             <button
               className="ms-tool"
-              onClick={() => setIsLeaderboardOpen(true)}
+              onClick={() => { track('open_ranking_button'); setIsLeaderboardOpen(true); }}
               aria-label="open-leaderboard"
               title="Leaderboard"
               style={{ width: 36, height: 36 }}
@@ -767,7 +815,13 @@ export default function MinesweeperPage() {
           </div>
           <button
             className={`ms-tool ${tool === 'flag' ? 'ms-tool-active' : ''}`}
-            onClick={() => setTool(tool === 'flag' ? 'reveal' : 'flag')}
+            onClick={() => {
+              const next = tool === 'flag' ? 'reveal' : 'flag';
+              setTool(next);
+              // Track tool toggle with specific event per tool
+              if (next === 'flag') track('tool_flag');
+              else track('tool_reveal');
+            }}
             aria-label="toggle-flag"
             style={{ width: 36, height: 36 }}
           >
@@ -855,7 +909,7 @@ export default function MinesweeperPage() {
                   </p>
                   <button
                     className="ms-button"
-                    onClick={() => signOut({ callbackUrl: '/' })}
+                    onClick={() => { track('logout'); signOut({ callbackUrl: '/' }); }}
                     aria-label="Logout"
                   >
                     Logout
@@ -870,7 +924,7 @@ export default function MinesweeperPage() {
                   </p>
                   <button
                     className="ms-button"
-                    onClick={() => signIn('google')}
+                    onClick={() => { track('login_google'); signIn('google'); }}
                     aria-label="Sign in with Google"
                   >
                     Continue with Google
