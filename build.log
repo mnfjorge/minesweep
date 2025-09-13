@@ -1,0 +1,50 @@
+nohup: ignoring input
+! Corepack is about to download https://registry.npmjs.org/pnpm/-/pnpm-10.15.1.tgz
+Lockfile is up to date, resolution step is skipped
+Progress: resolved 1, reused 0, downloaded 0, added 0
+Packages: +72
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+   ╭───────────────────────────────────────────────╮
+   │                                               │
+   │     Update available! 10.15.1 → 10.16.0.      │
+   │     Changelog: https://pnpm.io/v/10.16.0      │
+   │   To update, run: corepack use pnpm@10.16.0   │
+   │                                               │
+   ╰───────────────────────────────────────────────╯
+
+Progress: resolved 72, reused 0, downloaded 63, added 46
+Progress: resolved 72, reused 0, downloaded 69, added 69
+Progress: resolved 72, reused 0, downloaded 72, added 72, done
+
+dependencies:
++ @auth/core 0.40.0
++ @upstash/redis 1.35.3
++ next 15.5.2
++ next-auth 5.0.0-beta.29
++ react 19.1.0
++ react-dom 19.1.0
+
+devDependencies:
++ @tailwindcss/postcss 4.1.13
++ @types/node 20.19.13
++ @types/react 19.1.12
++ @types/react-dom 19.1.9
++ tailwindcss 4.1.13
++ typescript 5.9.2
+
+╭ Warning ─────────────────────────────────────────────────────────────────────╮
+│                                                                              │
+│   Ignored build scripts: @tailwindcss/oxide, sharp.                          │
+│   Run "pnpm approve-builds" to pick which dependencies should be allowed     │
+│   to run scripts.                                                            │
+│                                                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+Done in 3.2s using pnpm v10.15.1
+
+> nextjs@0.1.0 build /workspace
+> next build --turbopack --filter=. --reporter=append-only
+
+error: unknown option '--filter=.'
+ ELIFECYCLE  Command failed with exit code 1.

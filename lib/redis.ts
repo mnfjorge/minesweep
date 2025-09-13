@@ -43,7 +43,8 @@ export async function updateLeaderboardTop10(payload: RankUpdatePayload) {
 
   // Only update if this is a better (higher) score than existing
   try {
-    const previous = await redis.zscore<number>(LEADERBOARD_KEY, member);
+    // Upstash zscore returns number | null and does not take a generic
+    const previous = await redis.zscore(LEADERBOARD_KEY, member);
     if (previous == null || score > previous) {
       await redis.zadd(LEADERBOARD_KEY, { score, member });
     }
@@ -65,7 +66,7 @@ export type LeaderboardEntry = {
 export async function fetchLeaderboardTop10(): Promise<LeaderboardEntry[]> {
   if (!redis) return [];
   // Top 10 highest scores (i.e., least seconds)
-  const rows = await redis.zrange<{ member: string; score: number }>(
+  const rows = await redis.zrange<Array<{ member: string; score: number }>>(
     LEADERBOARD_KEY,
     0,
     9,
