@@ -17,6 +17,13 @@ type BoardConfig = {
   mines: number;
 };
 
+type LeaderboardEntry = {
+  userId: string;
+  seconds: number;
+  name: string | null;
+  email: string | null;
+};
+
 function createEmptyBoard(rows: number, cols: number): Cell[][] {
   return Array.from({ length: rows }, () =>
     Array.from({ length: cols }, () => ({
@@ -207,7 +214,12 @@ export default function MinesweeperPage() {
   const [isLeaderboardOpen, setIsLeaderboardOpen] = useState<boolean>(false);
   const [leaderboardLoading, setLeaderboardLoading] = useState<boolean>(false);
   const [leaderboardError, setLeaderboardError] = useState<string | null>(null);
-  const [leaderboardEntries, setLeaderboardEntries] = useState<Array<{ userId: string; seconds: number; name: string | null; email: string | null }>>([]);
+  const [leaderboardEntries, setLeaderboardEntries] = useState<LeaderboardEntry[]>([]);
+  const [leaderboardByDifficulty, setLeaderboardByDifficulty] = useState<{
+    easy: LeaderboardEntry[];
+    normal: LeaderboardEntry[];
+    hard: LeaderboardEntry[];
+  } | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const longPressTriggeredRef = useRef<boolean>(false);
@@ -329,7 +341,7 @@ export default function MinesweeperPage() {
               fetch('/api/rank', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ seconds }),
+                body: JSON.stringify({ seconds, difficulty }),
                 keepalive: true,
               }).catch(() => {});
             }
@@ -337,7 +349,7 @@ export default function MinesweeperPage() {
         } catch {}
       }
     },
-    [config.mines, status, seconds]
+    [config.mines, status, seconds, difficulty]
   );
 
   const revealCell = useCallback(
@@ -708,8 +720,17 @@ export default function MinesweeperPage() {
     fetch('/api/rank', { method: 'GET', cache: 'no-store' })
       .then(async (r: Response) => {
         if (!r.ok) throw new Error('Failed to load leaderboard');
-        const data = await r.json().catch(() => ({ entries: [] as Array<{ userId: string; seconds: number; name: string | null; email: string | null }> }));
-        if (!aborted) setLeaderboardEntries(Array.isArray(data.entries) ? (data.entries as Array<{ userId: string; seconds: number; name: string | null; email: string | null }>) : []);
+        const data = await r
+          .json()
+          .catch(() => ({ entriesByDifficulty: { easy: [], normal: [], hard: [] }, entries: [] }));
+        if (!aborted) {
+          const byDiff = data && data.entriesByDifficulty
+            ? (data.entriesByDifficulty as { easy: LeaderboardEntry[]; normal: LeaderboardEntry[]; hard: LeaderboardEntry[] })
+            : { easy: [], normal: [], hard: [] };
+          setLeaderboardByDifficulty(byDiff);
+          const list = difficulty === 'easy' ? byDiff.easy : difficulty === 'hard' ? byDiff.hard : byDiff.normal;
+          setLeaderboardEntries(Array.isArray(list) ? list : []);
+        }
       })
       .catch((e: unknown) => {
         const message = e instanceof Error ? e.message : 'Failed to load';
@@ -722,6 +743,12 @@ export default function MinesweeperPage() {
       aborted = true;
     };
   }, [isLeaderboardOpen]);
+
+  useEffect(() => {
+    if (!leaderboardByDifficulty) return;
+    const list = difficulty === 'easy' ? leaderboardByDifficulty.easy : difficulty === 'hard' ? leaderboardByDifficulty.hard : leaderboardByDifficulty.normal;
+    setLeaderboardEntries(Array.isArray(list) ? list : []);
+  }, [leaderboardByDifficulty, difficulty]);
 
   return (
     <div
@@ -888,7 +915,7 @@ export default function MinesweeperPage() {
           <div className="ms-modal" role="document">
             <div className="ms-tabs">
               <button className="ms-tab" aria-selected={true}>
-                🏆 Top 10
+                🏆 Top 10 — {difficulty[0].toUpperCase() + difficulty.slice(1)}
               </button>
               <button
                 className="ms-tab ms-tab-right"

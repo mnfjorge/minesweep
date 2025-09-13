@@ -1,5 +1,5 @@
 import { auth } from '@/auth';
-import { updateLeaderboardTop10, fetchLeaderboardTop10 } from '@/lib/redis';
+import { updateLeaderboardTop10, fetchLeaderboardTop10, type Difficulty } from '@/lib/redis';
 
 export async function POST(request: Request) {
   const session = await auth();
@@ -11,6 +11,11 @@ export async function POST(request: Request) {
     const body = await request.json().catch(() => ({}));
     const secondsRaw = body?.seconds;
     const seconds = typeof secondsRaw === 'number' && isFinite(secondsRaw) && secondsRaw >= 0 ? secondsRaw : null;
+    const difficultyRaw = body?.difficulty;
+    const difficulty: Difficulty =
+      difficultyRaw === 'easy' || difficultyRaw === 'normal' || difficultyRaw === 'hard'
+        ? difficultyRaw
+        : 'normal';
     if (seconds === null) {
       return new Response(JSON.stringify({ error: 'Invalid payload' }), { status: 400 });
     }
@@ -19,7 +24,7 @@ export async function POST(request: Request) {
     const name = session.user.name ?? null;
     const email = session.user.email ?? null;
 
-    await updateLeaderboardTop10({ userId, name, email, seconds });
+    await updateLeaderboardTop10({ userId, name, email, seconds, difficulty });
 
     return new Response(JSON.stringify({ ok: true }), { status: 200 });
   } catch (error) {
@@ -30,11 +35,24 @@ export async function POST(request: Request) {
 
 export async function GET() {
   try {
-    const entries = await fetchLeaderboardTop10();
-    return new Response(JSON.stringify({ entries }), { status: 200 });
+    const [easy, normal, hard] = await Promise.all([
+      fetchLeaderboardTop10('easy'),
+      fetchLeaderboardTop10('normal'),
+      fetchLeaderboardTop10('hard'),
+    ]);
+    return new Response(
+      JSON.stringify({
+        entriesByDifficulty: { easy, normal, hard },
+        entries: normal,
+      }),
+      { status: 200 }
+    );
   } catch (error) {
     console.error('rank GET error', error);
-    return new Response(JSON.stringify({ entries: [] }), { status: 200 });
+    return new Response(
+      JSON.stringify({ entriesByDifficulty: { easy: [], normal: [], hard: [] }, entries: [] }),
+      { status: 200 }
+    );
   }
 }
 
