@@ -216,7 +216,11 @@ export default function MinesweeperPage() {
   const [isLeaderboardOpen, setIsLeaderboardOpen] = useState<boolean>(false);
   const [leaderboardLoading, setLeaderboardLoading] = useState<boolean>(false);
   const [leaderboardError, setLeaderboardError] = useState<string | null>(null);
-  const [leaderboardEntries, setLeaderboardEntries] = useState<Array<{ userId: string; seconds: number; name: string | null; email: string | null }>>([]);
+  const [leaderboardEntries, setLeaderboardEntries] = useState<{
+    easy: Array<{ userId: string; seconds: number; name: string | null; email: string | null }>;
+    normal: Array<{ userId: string; seconds: number; name: string | null; email: string | null }>;
+    hard: Array<{ userId: string; seconds: number; name: string | null; email: string | null }>;
+  }>({ easy: [], normal: [], hard: [] });
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const longPressTriggeredRef = useRef<boolean>(false);
@@ -350,7 +354,7 @@ export default function MinesweeperPage() {
               fetch('/api/rank', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ seconds }),
+                body: JSON.stringify({ seconds, difficulty }),
                 keepalive: true,
               }).catch(() => { alert('Ranking not saved') });
             }
@@ -754,8 +758,12 @@ export default function MinesweeperPage() {
     fetch('/api/rank', { method: 'GET', cache: 'no-store' })
       .then(async (r: Response) => {
         if (!r.ok) alert('Failed to load leaderboard');
-        const data = await r.json().catch(() => ({ entries: [] as Array<{ userId: string; seconds: number; name: string | null; email: string | null }> }));
-        if (!aborted) setLeaderboardEntries(Array.isArray(data.entries) ? (data.entries as Array<{ userId: string; seconds: number; name: string | null; email: string | null }>) : []);
+        const data = await r.json().catch(() => ({ easy: [], normal: [], hard: [] }));
+        if (!aborted) setLeaderboardEntries({
+          easy: Array.isArray(data.easy) ? data.easy : [],
+          normal: Array.isArray(data.normal) ? data.normal : [],
+          hard: Array.isArray(data.hard) ? data.hard : [],
+        });
       })
       .catch((e: unknown) => {
         const message = e instanceof Error ? e.message : 'Failed to load';
@@ -957,23 +965,33 @@ export default function MinesweeperPage() {
               {leaderboardLoading && <div className="ms-copy">Loading…</div>}
               {leaderboardError && <div className="ms-copy" style={{ color: '#b00020' }}>{leaderboardError}</div>}
               {!leaderboardLoading && !leaderboardError && (
-                Array.isArray(leaderboardEntries) && leaderboardEntries.length > 0 ? (
-                  <ol style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-                    {leaderboardEntries.map((e, idx) => {
-                      const safeUserId = typeof e.userId === 'string' ? e.userId : String(e.userId ?? '');
-                      const display = e.name || e.email || (safeUserId ? safeUserId.slice(0, 6) + '…' : 'Unknown');
-                      return (
-                        <li key={safeUserId || String(idx)} style={{ display: 'grid', gridTemplateColumns: '40px 1fr auto', alignItems: 'center', gap: 8, padding: '6px 4px' }}>
-                          <span style={{ fontWeight: 800, textAlign: 'right' }}>{idx + 1}.</span>
-                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{display}</span>
-                          <span style={{ fontWeight: 700 }}>{formatSeconds(e.seconds)}</span>
-                        </li>
-                      );
-                    })}
-                  </ol>
-                ) : (
-                  <div className="ms-copy">No results yet. Be the first to win!</div>
-                )
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 16 }}>
+                  {(['easy','normal','hard'] as const).map((diff) => {
+                    const entries = leaderboardEntries[diff];
+                    return (
+                      <div key={diff}>
+                        <div className="ms-section-title" style={{ marginBottom: 8, textTransform: 'capitalize' }}>{diff}</div>
+                        {Array.isArray(entries) && entries.length > 0 ? (
+                          <ol style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                            {entries.map((e, idx) => {
+                              const safeUserId = typeof e.userId === 'string' ? e.userId : String(e.userId ?? '');
+                              const display = e.name || e.email || (safeUserId ? safeUserId.slice(0, 6) + '…' : 'Unknown');
+                              return (
+                                <li key={safeUserId || String(idx)} style={{ display: 'grid', gridTemplateColumns: '40px 1fr auto', alignItems: 'center', gap: 8, padding: '6px 4px' }}>
+                                  <span style={{ fontWeight: 800, textAlign: 'right' }}>{idx + 1}.</span>
+                                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{display}</span>
+                                  <span style={{ fontWeight: 700 }}>{formatSeconds(e.seconds)}</span>
+                                </li>
+                              );
+                            })}
+                          </ol>
+                        ) : (
+                          <div className="ms-copy">No results yet.</div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               )}
             </div>
           </div>
