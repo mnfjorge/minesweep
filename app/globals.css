@@ -312,6 +312,8 @@ body {
   display: flex;
   gap: 12px;
   align-items: center;
+  /* Allow buttons to move to a new line on narrow screens */
+  flex-wrap: wrap;
 }
 .ms-radio {
   display: inline-flex;
@@ -322,6 +324,16 @@ body {
   border: 2px solid var(--ms-dk);
   border-radius: 6px;
   box-shadow: inset -2px -2px 0 var(--ms-lo), inset 2px 2px 0 var(--ms-hi);
+  /* Let long content (like the Custom input) wrap onto multiple lines */
+  flex-wrap: wrap;
+  max-width: 100%;
+}
+
+/* Make the Custom mines input shrink on small screens to avoid overflow */
+@media (max-width: 480px) {
+  .ms-radio input[type="number"] {
+    width: clamp(64px, 28vw, 96px) !important;
+  }
 }
 .ms-hint {
   margin-top: 10px;
