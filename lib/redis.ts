@@ -20,13 +20,20 @@ export const redis: Redis | null = createRedis();
 
 export const LEADERBOARD_KEY = 'leaderboard:top';
 
+export type Difficulty = 'easy' | 'normal' | 'hard';
+
 export type RankUpdatePayload = {
   userId: string;
   name: string | null;
   email: string | null;
   // Lower time is better; we store negative seconds to rank ascending times as higher scores
   seconds: number;
+  difficulty: Difficulty;
 };
+
+function keyForDifficulty(difficulty: Difficulty): string {
+  return `${LEADERBOARD_KEY}:${difficulty}`;
+}
 
 export async function updateLeaderboardTop10(payload: RankUpdatePayload) {
   if (!redis) return;
@@ -44,16 +51,16 @@ export async function updateLeaderboardTop10(payload: RankUpdatePayload) {
   // Only update if this is a better (higher) score than existing
   try {
     // Upstash zscore returns number | null and does not take a generic
-    const previous = await redis.zscore(LEADERBOARD_KEY, member);
+    const previous = await redis.zscore(keyForDifficulty(payload.difficulty), member);
     if (previous == null || score > previous) {
-      await redis.zadd(LEADERBOARD_KEY, { score, member });
+      await redis.zadd(keyForDifficulty(payload.difficulty), { score, member });
     }
   } catch {
     // fallback: best-effort insert
-    await redis.zadd(LEADERBOARD_KEY, { score, member });
+    await redis.zadd(keyForDifficulty(payload.difficulty), { score, member });
   }
   // Keep only top 10 (highest scores due to negative seconds => best times)
-  await redis.zremrangebyrank(LEADERBOARD_KEY, 0, -11);
+  await redis.zremrangebyrank(keyForDifficulty(payload.difficulty), 0, -11);
 }
 
 export type LeaderboardEntry = {
@@ -63,11 +70,11 @@ export type LeaderboardEntry = {
   email: string | null;
 };
 
-export async function fetchLeaderboardTop10(): Promise<LeaderboardEntry[]> {
+export async function fetchLeaderboardTop10(difficulty: Difficulty): Promise<LeaderboardEntry[]> {
   if (!redis) return [];
   // Top 10 highest scores (i.e., least seconds)
   const rows = await redis.zrange<Array<{ member: string; score: number }>>(
-    LEADERBOARD_KEY,
+    keyForDifficulty(difficulty),
     0,
     9,
     { rev: true, withScores: true }
