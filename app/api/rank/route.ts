@@ -15,10 +15,19 @@ export async function POST(request: Request) {
       return new Response(JSON.stringify({ error: 'Invalid payload' }), { status: 400 });
     }
 
-    const rawId = (session.user as any).id || session.user.email || session.user.name || 'unknown';
-    const userId = typeof rawId === 'string' ? rawId : String(rawId);
-    const name = session.user.name ?? null;
-    const email = session.user.email ?? null;
+    const firstNonEmpty = (...values: Array<unknown>): string => {
+      for (const v of values) {
+        if (typeof v === 'string') {
+          const t = v.trim();
+          if (t && t.toLowerCase() !== 'undefined' && t.toLowerCase() !== 'null') return t;
+        }
+      }
+      return 'unknown';
+    };
+    const rawId = firstNonEmpty((session.user as any).id, session.user.email, session.user.name);
+    const userId = rawId;
+    const name = firstNonEmpty(session.user.name) || null;
+    const email = firstNonEmpty(session.user.email) || null;
 
     await updateLeaderboardTop10({ userId, name, email, seconds });
 

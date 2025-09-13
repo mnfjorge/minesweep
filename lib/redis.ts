@@ -80,8 +80,15 @@ export async function fetchLeaderboardTop10(): Promise<LeaderboardEntry[]> {
     { rev: true, withScores: true }
   );
 
+  const cleaned = rows.filter((row) => {
+    const memberStr = String((row as any)?.member ?? '').trim().toLowerCase();
+    if (!memberStr) return false;
+    if (memberStr === 'undefined' || memberStr === 'null' || memberStr === 'unknown') return false;
+    return true;
+  });
+
   const results = await Promise.all(
-    rows.map(async (row: { member: string; score: number }) => {
+    cleaned.map(async (row: { member: string; score: number }) => {
       const meta = await redis!.hgetall<Record<string, string>>(`user:${row.member}`);
       const sanitizeToNull = (value: unknown): string | null => {
         if (typeof value !== 'string') return null;
