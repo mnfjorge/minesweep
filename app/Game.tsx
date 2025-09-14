@@ -336,21 +336,59 @@ export default function Game(props: {
   useEffect(() => {
     const measurePanel = () => {
       try {
-        const h = panelRef.current ? panelRef.current.offsetHeight : DEFAULT_PANEL_HEIGHT;
+        const el = panelRef.current;
+        const h = el ? Math.round(el.getBoundingClientRect().height) : DEFAULT_PANEL_HEIGHT;
         setPanelHeight(h || DEFAULT_PANEL_HEIGHT);
       } catch {}
     };
+
     const onResize = () => {
       measurePanel();
       if (!isFirstClickRef.current) return;
       const next = computeConfig();
       reset(next);
     };
+
+    // Observe header size changes directly (fonts, dynamic UI, orientation)
+    let ro: ResizeObserver | null = null;
+    try {
+      if (typeof ResizeObserver !== 'undefined' && panelRef.current) {
+        ro = new ResizeObserver(() => {
+          measurePanel();
+        });
+        ro.observe(panelRef.current);
+      }
+    } catch {}
+
     // Initial measure
     measurePanel();
     window.addEventListener('resize', onResize);
+    // React to visual viewport changes (mobile URL bar show/hide, IME)
+    let vv: any | null = null;
+    let onVvChange: (() => void) | null = null;
+    try {
+      vv = (window as any).visualViewport ?? null;
+      if (vv) {
+        onVvChange = () => {
+          // Re-measure panel then recompute layout when idle
+          measurePanel();
+          if (!isFirstClickRef.current) return;
+          const next = computeConfig();
+          reset(next);
+        };
+        vv.addEventListener('resize', onVvChange);
+        vv.addEventListener('scroll', onVvChange);
+      }
+    } catch {}
     return () => {
       window.removeEventListener('resize', onResize);
+      try { ro && ro.disconnect(); } catch {}
+      try {
+        if (vv && onVvChange) {
+          vv.removeEventListener('resize', onVvChange);
+          vv.removeEventListener('scroll', onVvChange);
+        }
+      } catch {}
       if (timerRef.current) clearInterval(timerRef.current);
     };
   }, []);
