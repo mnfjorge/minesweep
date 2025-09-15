@@ -218,7 +218,6 @@ export default function Game(props: {
 
   const [config, setConfig] = useState<BoardConfig>(() => computeConfig());
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
-  const [activeTab, setActiveTab] = useState<'settings' | 'account'>('settings');
   const [difficulty, setDifficulty] = useState<Difficulty>(() => {
     if (typeof window === 'undefined') return 'normal';
     try {
@@ -859,7 +858,6 @@ export default function Game(props: {
           <button
             className="ms-tool"
             onClick={() => {
-              setActiveTab('settings');
               setIsSettingsOpen(true);
               track('open_settings');
             }}
@@ -889,8 +887,6 @@ export default function Game(props: {
 
       <Settings
         isOpen={isSettingsOpen}
-        activeTab={activeTab}
-        onChangeTab={(t) => setActiveTab(t)}
         onClose={() => setIsSettingsOpen(false)}
         difficulty={difficulty}
         applyDifficulty={applyDifficulty}
