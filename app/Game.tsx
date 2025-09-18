@@ -23,14 +23,8 @@ type BoardConfig = {
   cellSize: number;
 };
 
-type RankableDifficulty = 'easy' | 'normal' | 'hard';
-type Difficulty = RankableDifficulty | 'custom';
-
-export default function Game(props: {
-  onSubmitRank: (args: { seconds: number; difficulty: RankableDifficulty }) => Promise<unknown>;
-  fetchLeaderboard: () => Promise<{ easy: Array<{ userId: string; seconds: number; name: string | null; email: string | null }>; normal: Array<{ userId: string; seconds: number; name: string | null; email: string | null }>; hard: Array<{ userId: string; seconds: number; name: string | null; email: string | null }>; }>;
-}) {
-  const { onSubmitRank, fetchLeaderboard } = props;
+type Difficulty = 'easy' | 'normal' | 'hard' | 'custom';
+export default function Game() {
 
   function createEmptyBoard(rows: number, cols: number): Cell[][] {
     return Array.from({ length: rows }, () =>
@@ -499,17 +493,11 @@ export default function Game(props: {
         try {
           saveLocalBest({ seconds, difficulty });
         } catch {}
-        try {
-          if (status === 'authenticated' && difficulty !== 'custom') {
-            if (!(window as any)._rankSubmitted) {
-              (window as any)._rankSubmitted = true;
-              onSubmitRank({ seconds, difficulty: difficulty as RankableDifficulty }).catch(() => { alert('Ranking not saved') });
-            }
-          }
-        } catch {}
+        // Global ranking submission removed; only local bests are kept
+        try {} catch {}
       }
     },
-    [config.mines, status, seconds, onSubmitRank, saveLocalBest, difficulty]
+    [config.mines, status, seconds, saveLocalBest, difficulty]
   );
 
   const revealCell = useCallback(
@@ -903,7 +891,6 @@ export default function Game(props: {
       <Ranking
         isOpen={isLeaderboardOpen}
         onClose={() => setIsLeaderboardOpen(false)}
-        fetchEntries={fetchLeaderboard}
         onTrack={(e) => track(e)}
         formatSeconds={formatSeconds}
       />
