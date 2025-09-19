@@ -58,7 +58,7 @@ export default function Ranking(props: {
                   {best ? (
                     <div style={{ display: "grid", gridTemplateColumns: "1fr auto", alignItems: "center", gap: 8, padding: "6px 4px" }}>
                       <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{best.name || 'You'}</span>
-                      <span style={{ fontWeight: 700 }}>{formatSeconds(best.seconds)}</span>
+                      <span style={{ fontWeight: 700 }}>{formatSeconds(best.seconds)} ({best.seconds}s)</span>
                     </div>
                   ) : (
                     <div className="ms-copy">No best score yet.</div>
