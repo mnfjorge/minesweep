@@ -240,6 +240,7 @@ export default function Game() {
   const [seconds, setSeconds] = useState<number>(0);
   const [tool, setTool] = useState<'reveal' | 'flag'>('reveal');
   const [isLeaderboardOpen, setIsLeaderboardOpen] = useState<boolean>(false);
+  const [isNewBest, setIsNewBest] = useState<boolean>(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const longPressTriggeredRef = useRef<boolean>(false);
@@ -282,6 +283,7 @@ export default function Game() {
       setIsFirstClick(true);
       setGameOver(false);
       setIsWin(false);
+      setIsNewBest(false);
       setFlagsPlaced(0);
       setSeconds(0);
       setTool('reveal');
@@ -402,9 +404,9 @@ export default function Game() {
 
   // Local best score persistence (per difficulty) without prompting for name
   const saveLocalBest = useCallback(
-    (args: { seconds: number; difficulty: Difficulty }) => {
+    (args: { seconds: number; difficulty: Difficulty }): boolean => {
       try {
-        if (typeof window === 'undefined') return;
+        if (typeof window === 'undefined') return false;
 
         const BEST_KEY = 'ms_best_v1';
 
@@ -450,7 +452,10 @@ export default function Game() {
           } catch {}
           track('local_best_updated', { difficulty: args.difficulty, seconds: args.seconds });
         }
-      } catch {}
+        return isBetter;
+      } catch {
+        return false;
+      }
     },
     [session, status]
   );
@@ -488,9 +493,10 @@ export default function Game() {
           mines: config.mines,
           difficulty,
         });
-        // Save best score locally with name
+        // Save best score locally with name and mark if new record
         try {
-          saveLocalBest({ seconds, difficulty });
+          const wasNew = saveLocalBest({ seconds, difficulty });
+          setIsNewBest(wasNew);
         } catch {}
         // Global ranking submission removed; only local bests are kept
         try {} catch {}
@@ -909,6 +915,9 @@ export default function Game() {
         <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
           <div className="px-6 py-4 rounded-lg shadow-lg bg-black/80 text-white text-4xl md:text-6xl font-extrabold tracking-wide text-center">
             {isWin ? 'You Win!' : 'Boom!'}
+            {isWin && isNewBest && (
+              <div className="text-xl md:text-2xl mt-2 font-bold text-yellow-300">New Record!</div>
+            )}
           </div>
         </div>
       )}
