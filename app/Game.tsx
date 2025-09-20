@@ -783,23 +783,37 @@ export default function Game() {
   const SevenSegment = ({ value }: { value: number }) => {
     const str = pad3(value);
     const on = '#ff2a2a';
-    const off = '#300000';
-    const digitWidth = 14;
-    const digitHeight = 24;
-    const seg = 4;
-    const gap = 3;
+    const off = '#2a0000';
+    const digitWidth = 18;
+    const digitHeight = 30;
+    const seg = 5;
+    const gap = 4;
+    const pad = 2; // inner padding per digit for better visual balance
+    const rx = 1.5; // rounded corners to reduce the blocky look
 
-    const segmentsFor = (x: number, lit: boolean[]) => (
-      <g transform={`translate(${x},0)`}>
-        <rect x={1} y={0} width={digitWidth - 2} height={seg} fill={lit[0] ? on : off} />
-        <rect x={digitWidth - seg} y={1} width={seg} height={digitHeight / 2 - 2} fill={lit[1] ? on : off} />
-        <rect x={digitWidth - seg} y={digitHeight / 2 + 1} width={seg} height={digitHeight / 2 - 2} fill={lit[2] ? on : off} />
-        <rect x={1} y={digitHeight - seg} width={digitWidth - 2} height={seg} fill={lit[3] ? on : off} />
-        <rect x={0} y={digitHeight / 2 + 1} width={seg} height={digitHeight / 2 - 2} fill={lit[4] ? on : off} />
-        <rect x={0} y={1} width={seg} height={digitHeight / 2 - 2} fill={lit[5] ? on : off} />
-        <rect x={1} y={digitHeight / 2 - seg / 2} width={digitWidth - 2} height={seg} fill={lit[6] ? on : off} />
-      </g>
+    const h = (x: number, y: number, w: number, lit: boolean) => (
+      <rect x={x} y={y} width={w} height={seg} rx={rx} ry={rx} fill={lit ? on : off} />
     );
+
+    const v = (x: number, y: number, hgt: number, lit: boolean) => (
+      <rect x={x} y={y} width={seg} height={hgt} rx={rx} ry={rx} fill={lit ? on : off} />
+    );
+
+    const segmentsFor = (x: number, lit: boolean[]) => {
+      const iw = digitWidth - pad * 2;
+      const ih = digitHeight - pad * 2;
+      return (
+        <g transform={`translate(${x + pad},${pad})`}>
+          {h(1, 0, iw - 2, lit[0])}
+          {v(iw - seg, 1, ih / 2 - 2, lit[1])}
+          {v(iw - seg, ih / 2 + 1, ih / 2 - 2, lit[2])}
+          {h(1, ih - seg, iw - 2, lit[3])}
+          {v(0, ih / 2 + 1, ih / 2 - 2, lit[4])}
+          {v(0, 1, ih / 2 - 2, lit[5])}
+          {h(1, ih / 2 - seg / 2, iw - 2, lit[6])}
+        </g>
+      );
+    };
 
     const map: Record<string, [boolean, boolean, boolean, boolean, boolean, boolean, boolean]> = {
       '0': [true, true, true, true, true, true, false],
@@ -817,7 +831,7 @@ export default function Game() {
     const width = digitWidth * 3 + gap * 2;
     const height = digitHeight;
     return (
-      <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
+      <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} shapeRendering="crispEdges">
         {segmentsFor(0, map[str[0]])}
         {segmentsFor(digitWidth + gap, map[str[1]])}
         {segmentsFor(2 * (digitWidth + gap), map[str[2]])}
