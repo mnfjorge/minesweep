@@ -245,6 +245,24 @@ export default function Game() {
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const longPressTriggeredRef = useRef<boolean>(false);
   const touchStartPosRef = useRef<{ x: number; y: number } | null>(null);
+  const suppressNextVibrateRef = useRef<boolean>(false);
+
+  const triggerHapticImpact = useCallback((durationMs: number = 15) => {
+    try {
+      if (typeof window === 'undefined') return;
+      const isCoarse =
+        typeof window.matchMedia === 'function' &&
+        window.matchMedia('(pointer: coarse)').matches;
+      const hasTouch =
+        (navigator as any).maxTouchPoints > 0 || 'ontouchstart' in window;
+      if (
+        (isCoarse || hasTouch) &&
+        typeof (navigator as any).vibrate === 'function'
+      ) {
+        (navigator as any).vibrate(Math.max(1, Math.floor(durationMs)));
+      }
+    } catch {}
+  }, []);
 
   const { data: session, status } = useSession();
 
@@ -578,24 +596,13 @@ export default function Game() {
       setBoard(newBoard);
       setFlagsPlaced((prev: number) => prev + (cell.isFlagged ? 1 : -1));
       if (!wasFlagged) {
-        try {
-          if (typeof window !== 'undefined') {
-            const isCoarse =
-              typeof window.matchMedia === 'function' &&
-              window.matchMedia('(pointer: coarse)').matches;
-            const hasTouch =
-              (navigator as any).maxTouchPoints > 0 || 'ontouchstart' in window;
-            if (
-              (isCoarse || hasTouch) &&
-              typeof (navigator as any).vibrate === 'function'
-            ) {
-              (navigator as any).vibrate(15);
-            }
-          }
-        } catch {}
+        if (!suppressNextVibrateRef.current) {
+          triggerHapticImpact(15);
+        }
       }
+      suppressNextVibrateRef.current = false;
     },
-    [board, gameOver]
+    [board, gameOver, triggerHapticImpact]
   );
 
   const chordReveal = useCallback(
@@ -705,14 +712,17 @@ export default function Game() {
       touchStartPosRef.current = { x: t.clientX, y: t.clientY };
       longPressTimerRef.current = setTimeout(() => {
         longPressTriggeredRef.current = true;
+        suppressNextVibrateRef.current = true;
+        triggerHapticImpact(15);
         if (tool === 'flag') {
           revealCell(r, c);
         } else {
           toggleFlag(r, c);
         }
+        suppressNextVibrateRef.current = false;
       }, 400);
     },
-    [revealCell, toggleFlag, tool]
+    [revealCell, toggleFlag, tool, triggerHapticImpact]
   );
 
   const onCellTouchMove = useCallback(
