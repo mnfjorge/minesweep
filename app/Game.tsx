@@ -245,7 +245,6 @@ export default function Game() {
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const longPressTriggeredRef = useRef<boolean>(false);
   const touchStartPosRef = useRef<{ x: number; y: number } | null>(null);
-  const suppressNextVibrateRef = useRef<boolean>(false);
 
   const triggerHapticImpact = useCallback((durationMs: number = 15) => {
     try {
@@ -596,11 +595,8 @@ export default function Game() {
       setBoard(newBoard);
       setFlagsPlaced((prev: number) => prev + (cell.isFlagged ? 1 : -1));
       if (!wasFlagged) {
-        if (!suppressNextVibrateRef.current) {
-          triggerHapticImpact(15);
-        }
+        triggerHapticImpact(15);
       }
-      suppressNextVibrateRef.current = false;
     },
     [board, gameOver, triggerHapticImpact]
   );
@@ -712,14 +708,12 @@ export default function Game() {
       touchStartPosRef.current = { x: t.clientX, y: t.clientY };
       longPressTimerRef.current = setTimeout(() => {
         longPressTriggeredRef.current = true;
-        suppressNextVibrateRef.current = true;
         triggerHapticImpact(15);
         if (tool === 'flag') {
           revealCell(r, c);
         } else {
           toggleFlag(r, c);
         }
-        suppressNextVibrateRef.current = false;
       }, 400);
     },
     [revealCell, toggleFlag, tool, triggerHapticImpact]
