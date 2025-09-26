@@ -525,6 +525,10 @@ export default function Game() {
   const revealCell = useCallback(
     (r: number, c: number) => {
       if (gameOver) return;
+      // Do not start the game or place mines if the target cell cannot be revealed
+      const current = board[r][c];
+      if (current.isRevealed || current.isFlagged) return;
+
       let newBoard = cloneBoard(board);
 
       if (isFirstClick) {
@@ -548,7 +552,7 @@ export default function Game() {
       }
 
       const cell = newBoard[r][c];
-      if (cell.isRevealed || cell.isFlagged) return;
+      if (cell.isRevealed) return;
 
       if (cell.isMine) {
         for (let rr = 0; rr < newBoard.length; rr++) {
