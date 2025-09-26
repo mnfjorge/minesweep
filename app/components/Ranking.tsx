@@ -39,6 +39,16 @@ export default function Ranking(props: {
     return () => {};
   }, [isOpen]);
 
+  const handleClear = () => {
+    try {
+      if (typeof window !== 'undefined') {
+        window.localStorage.removeItem('ms_best_v1');
+      }
+    } catch {}
+    setMyBest({ easy: null, normal: null, hard: null });
+    if (onTrackRef.current) onTrackRef.current('clear_ranking');
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -66,6 +76,11 @@ export default function Ranking(props: {
                 </div>
               );
             })}
+          </div>
+          <div style={{ marginTop: 12, display: "flex", justifyContent: "flex-end" }}>
+            <button className="ms-button" onClick={handleClear} aria-label="clear-best-scores" title="Clear your best times">
+              Clear
+            </button>
           </div>
         </div>
       </div>
