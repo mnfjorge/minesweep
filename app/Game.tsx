@@ -279,7 +279,8 @@ export default function Game() {
     gameOverRef.current = gameOver;
   }, [gameOver]);
 
-  const minesRemaining = Math.max(actualMines - flagsPlaced, 0);
+  // Classic Minesweeper counter can go negative when over-flagging
+  const minesRemaining = actualMines - flagsPlaced;
   const computeMinesForDifficulty = useCallback(
     (totalCells: number, diff: Difficulty) => {
       if (diff === 'custom') {
@@ -785,45 +786,60 @@ export default function Game() {
     return `ms-n${n}`;
   };
 
-  const pad3 = (n: number) =>
-    String(Math.max(0, Math.min(999, n))).padStart(3, '0');
+  const SevenSegment = ({
+    value,
+    signed = false,
+  }: {
+    value: number;
+    signed?: boolean;
+  }) => {
+    const clampTimer = (n: number) => Math.max(0, Math.min(999, Math.floor(n)));
+    const clampCounter = (n: number) => Math.max(-99, Math.min(999, Math.floor(n)));
 
-  const SevenSegment = ({ value }: { value: number }) => {
-    const str = pad3(value);
-    const on = '#ff2a2a';
-    const off = '#2a0000';
-    const digitWidth = 18;
-    const digitHeight = 30;
-    const seg = 5;
-    const gap = 4;
-    const pad = 2; // inner padding per digit for better visual balance
-    const rx = 1.5; // rounded corners to reduce the blocky look
-
-    const h = (x: number, y: number, w: number, lit: boolean) => (
-      <rect x={x} y={y} width={w} height={seg} rx={rx} ry={rx} fill={lit ? on : off} />
-    );
-
-    const v = (x: number, y: number, hgt: number, lit: boolean) => (
-      <rect x={x} y={y} width={seg} height={hgt} rx={rx} ry={rx} fill={lit ? on : off} />
-    );
-
-    const segmentsFor = (x: number, lit: boolean[]) => {
-      const iw = digitWidth - pad * 2;
-      const ih = digitHeight - pad * 2;
-      return (
-        <g transform={`translate(${x + pad},${pad})`}>
-          {h(1, 0, iw - 2, lit[0])}
-          {v(iw - seg, 1, ih / 2 - 2, lit[1])}
-          {v(iw - seg, ih / 2 + 1, ih / 2 - 2, lit[2])}
-          {h(1, ih - seg, iw - 2, lit[3])}
-          {v(0, ih / 2 + 1, ih / 2 - 2, lit[4])}
-          {v(0, 1, ih / 2 - 2, lit[5])}
-          {h(1, ih / 2 - seg / 2, iw - 2, lit[6])}
-        </g>
-      );
+    const format3 = (n: number) => {
+      const v = signed ? clampCounter(n) : clampTimer(n);
+      if (signed && v < 0) {
+        const abs = Math.abs(v);
+        return `-${String(abs).padStart(2, '0')}`;
+      }
+      return String(v).padStart(3, '0');
     };
 
-    const map: Record<string, [boolean, boolean, boolean, boolean, boolean, boolean, boolean]> = {
+    const str = format3(value);
+
+    // Digit box (viewBox units). SVG scales to fit container.
+    const DIGIT_W = 24;
+    const DIGIT_H = 40;
+    const GAP = 4;
+
+    // Segment geometry tuned to resemble classic Minesweeper LEDs.
+    const M = 2; // inner margin
+    const T = 6; // segment thickness
+    const B = 3; // bevel size (angled ends)
+
+    const on = 'var(--ms-led-fg)';
+    const off = 'var(--ms-led-off)';
+
+    const hSeg = (x: number, y: number, w: number) => {
+      // Beveled horizontal segment polygon path.
+      const x0 = x;
+      const x1 = x + w;
+      const y0 = y;
+      const y1 = y + T;
+      return `M ${x0 + B} ${y0} L ${x1 - B} ${y0} L ${x1} ${y0 + B} L ${x1 - B} ${y1} L ${x0 + B} ${y1} L ${x0} ${y0 + B} Z`;
+    };
+
+    const vSeg = (x: number, y: number, h: number) => {
+      // Beveled vertical segment polygon path.
+      const x0 = x;
+      const x1 = x + T;
+      const y0 = y;
+      const y1 = y + h;
+      return `M ${x0} ${y0 + B} L ${x0 + B} ${y0} L ${x1 - B} ${y0} L ${x1} ${y0 + B} L ${x1} ${y1 - B} L ${x1 - B} ${y1} L ${x0 + B} ${y1} L ${x0} ${y1 - B} Z`;
+    };
+
+    type SegMask = [boolean, boolean, boolean, boolean, boolean, boolean, boolean]; // a,b,c,d,e,f,g
+    const map: Record<string, SegMask> = {
       '0': [true, true, true, true, true, true, false],
       '1': [false, true, true, false, false, false, false],
       '2': [true, true, false, true, true, false, true],
@@ -834,15 +850,54 @@ export default function Game() {
       '7': [true, true, true, false, false, false, false],
       '8': [true, true, true, true, true, true, true],
       '9': [true, true, true, true, false, true, true],
+      '-': [false, false, false, false, false, false, true],
     };
 
-    const width = digitWidth * 3 + gap * 2;
-    const height = digitHeight;
+    const segmentsForDigit = (dx: number, ch: string) => {
+      const lit = map[ch] ?? map['0'];
+      const iw = DIGIT_W - 2 * M;
+      const ih = DIGIT_H - 2 * M;
+      const half = ih / 2;
+      const upperH = half - T;
+      const lowerH = half - T;
+
+      const leftX = M;
+      const rightX = DIGIT_W - M - T;
+      const topY = M;
+      const midY = M + (ih - T) / 2;
+      const botY = M + ih - T;
+      const upperY = M + T;
+      const lowerY = M + half;
+
+      const x = dx;
+      return (
+        <g transform={`translate(${x},0)`} shapeRendering="geometricPrecision">
+          {/* Draw all segments (including unlit) for the classic dim look */}
+          <path d={hSeg(leftX, topY, iw)} fill={lit[0] ? on : off} />
+          <path d={vSeg(rightX, upperY, upperH)} fill={lit[1] ? on : off} />
+          <path d={vSeg(rightX, lowerY, lowerH)} fill={lit[2] ? on : off} />
+          <path d={hSeg(leftX, botY, iw)} fill={lit[3] ? on : off} />
+          <path d={vSeg(leftX, lowerY, lowerH)} fill={lit[4] ? on : off} />
+          <path d={vSeg(leftX, upperY, upperH)} fill={lit[5] ? on : off} />
+          <path d={hSeg(leftX, midY, iw)} fill={lit[6] ? on : off} />
+        </g>
+      );
+    };
+
+    const width = DIGIT_W * 3 + GAP * 2;
+    const height = DIGIT_H;
+
     return (
-      <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} shapeRendering="crispEdges">
-        {segmentsFor(0, map[str[0]])}
-        {segmentsFor(digitWidth + gap, map[str[1]])}
-        {segmentsFor(2 * (digitWidth + gap), map[str[2]])}
+      <svg
+        width="100%"
+        height="100%"
+        viewBox={`0 0 ${width} ${height}`}
+        preserveAspectRatio="xMidYMid meet"
+        aria-hidden="true"
+      >
+        {segmentsForDigit(0, str[0])}
+        {segmentsForDigit(DIGIT_W + GAP, str[1])}
+        {segmentsForDigit(2 * (DIGIT_W + GAP), str[2])}
       </svg>
     );
   };
@@ -869,7 +924,7 @@ export default function Game() {
           ref={panelRef as any}
         >
           <div className="ms-led">
-            <SevenSegment value={minesRemaining} />
+            <SevenSegment value={minesRemaining} signed />
           </div>
           <button
             className="ms-tool"

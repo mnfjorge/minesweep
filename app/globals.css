@@ -103,6 +103,8 @@ body {
   --ms-dk: #4d4d4d;
   --ms-led-bg: #300000;
   --ms-led-fg: #ff2a2a;
+  /* Dim unlit segments (visible like the classic game) */
+  --ms-led-off: #4a0000;
 }
 
 .ms-panel {
@@ -122,12 +124,27 @@ body {
   color: var(--ms-led-fg);
   background: var(--ms-led-bg);
   border: 2px solid var(--ms-dk);
-  padding: 2px 6px;
+  padding: 3px 5px;
   font-weight: 700;
-  min-width: 64px;
+  /* Make the 3-digit display scale sensibly across devices */
+  height: clamp(26px, 4vh, 42px);
+  aspect-ratio: 72 / 40;
   text-align: center;
   border-radius: 3px;
-  box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.6);
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, 0.12),
+    inset -1px -1px 0 rgba(0, 0, 0, 0.55),
+    inset 0 0 7px rgba(0, 0, 0, 0.65);
+}
+
+.ms-led svg {
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 
 /* Keep counters flush to edges on wide and narrow screens */
