@@ -790,40 +790,20 @@ export default function Game() {
 
   const SevenSegment = ({ value }: { value: number }) => {
     const str = pad3(value);
-    const on = '#ff2a2a';
-    const off = '#2a0000';
-    const digitWidth = 18;
-    const digitHeight = 30;
-    const seg = 5;
-    const gap = 4;
-    const pad = 2; // inner padding per digit for better visual balance
-    const rx = 1.5; // rounded corners to reduce the blocky look
+    const on = '#ff0000';
+    const off = '#4d0000';
 
-    const h = (x: number, y: number, w: number, lit: boolean) => (
-      <rect x={x} y={y} width={w} height={seg} rx={rx} ry={rx} fill={lit ? on : off} />
-    );
-
-    const v = (x: number, y: number, hgt: number, lit: boolean) => (
-      <rect x={x} y={y} width={seg} height={hgt} rx={rx} ry={rx} fill={lit ? on : off} />
-    );
-
-    const segmentsFor = (x: number, lit: boolean[]) => {
-      const iw = digitWidth - pad * 2;
-      const ih = digitHeight - pad * 2;
-      return (
-        <g transform={`translate(${x + pad},${pad})`}>
-          {h(1, 0, iw - 2, lit[0])}
-          {v(iw - seg, 1, ih / 2 - 2, lit[1])}
-          {v(iw - seg, ih / 2 + 1, ih / 2 - 2, lit[2])}
-          {h(1, ih - seg, iw - 2, lit[3])}
-          {v(0, ih / 2 + 1, ih / 2 - 2, lit[4])}
-          {v(0, 1, ih / 2 - 2, lit[5])}
-          {h(1, ih / 2 - seg / 2, iw - 2, lit[6])}
-        </g>
-      );
+    const paths = {
+      a: 'M 20,10 L 80,10 L 70,30 L 30,30 Z',
+      b: 'M 80,10 L 90,20 L 90,80 L 80,90 L 70,80 L 70,30 Z',
+      c: 'M 80,90 L 90,100 L 90,160 L 80,170 L 70,160 L 70,100 Z',
+      d: 'M 20,170 L 80,170 L 70,150 L 30,150 Z',
+      e: 'M 20,90 L 10,100 L 10,160 L 20,170 L 30,160 L 30,100 Z',
+      f: 'M 20,10 L 10,20 L 10,80 L 20,90 L 30,80 L 30,30 Z',
+      g: 'M 20,90 L 30,80 L 70,80 L 80,90 L 70,100 L 30,100 Z',
     };
 
-    const map: Record<string, [boolean, boolean, boolean, boolean, boolean, boolean, boolean]> = {
+    const map: Record<string, boolean[]> = {
       '0': [true, true, true, true, true, true, false],
       '1': [false, true, true, false, false, false, false],
       '2': [true, true, false, true, true, false, true],
@@ -836,13 +816,34 @@ export default function Game() {
       '9': [true, true, true, true, false, true, true],
     };
 
-    const width = digitWidth * 3 + gap * 2;
-    const height = digitHeight;
+    const digitWidth = 100;
+    const digitGap = 10;
+    const totalWidth = digitWidth * 3 + digitGap * 2;
+    const totalHeight = 180;
+
     return (
-      <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} shapeRendering="crispEdges">
-        {segmentsFor(0, map[str[0]])}
-        {segmentsFor(digitWidth + gap, map[str[1]])}
-        {segmentsFor(2 * (digitWidth + gap), map[str[2]])}
+      <svg
+        viewBox={`0 0 ${totalWidth} ${totalHeight}`}
+        width={72}
+        height={38}
+        style={{ display: 'block' }}
+      >
+        {[0, 1, 2].map((i) => {
+          const digit = str[i];
+          const active = map[digit];
+          const x = i * (digitWidth + digitGap);
+          return (
+            <g key={i} transform={`translate(${x},0)`}>
+              {['a', 'b', 'c', 'd', 'e', 'f', 'g'].map((seg, idx) => (
+                <path
+                  key={seg}
+                  d={paths[seg as keyof typeof paths]}
+                  fill={active[idx] ? on : off}
+                />
+              ))}
+            </g>
+          );
+        })}
       </svg>
     );
   };
