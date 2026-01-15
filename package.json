@@ -8,12 +8,12 @@
     "start": "next start"
   },
   "dependencies": {
-    "@auth/core": "^0.40.0",
+    "@auth/core": "^0.41.0",
     "@upstash/redis": "^1.35.3",
-    "next": "15.5.2",
-    "next-auth": "5.0.0-beta.29",
-    "react": "19.1.0",
-    "react-dom": "19.1.0"
+    "next": "16.1.2",
+    "next-auth": "5.0.0-beta.30",
+    "react": "19.2.3",
+    "react-dom": "19.2.3"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
