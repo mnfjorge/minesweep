@@ -788,42 +788,106 @@ export default function Game() {
   const pad3 = (n: number) =>
     String(Math.max(0, Math.min(999, n))).padStart(3, '0');
 
+  // Authentic 7-segment LED display component styled like Windows 98 Minesweeper
   const SevenSegment = ({ value }: { value: number }) => {
     const str = pad3(value);
-    const on = '#ff2a2a';
-    const off = '#2a0000';
-    const digitWidth = 18;
-    const digitHeight = 30;
-    const seg = 5;
-    const gap = 4;
-    const pad = 2; // inner padding per digit for better visual balance
-    const rx = 1.5; // rounded corners to reduce the blocky look
+    const onColor = '#ff0000';
+    const offColor = '#300000';
+    
+    // Dimensions for each digit - proportioned like classic LCD/LED displays
+    const digitWidth = 13;
+    const digitHeight = 23;
+    const segThick = 2.4; // segment thickness
+    const segGap = 0.6; // gap between segments
+    const digitGap = 3; // gap between digits
+    const skew = 0.5; // slight slant for authentic look
 
-    const h = (x: number, y: number, w: number, lit: boolean) => (
-      <rect x={x} y={y} width={w} height={seg} rx={rx} ry={rx} fill={lit ? on : off} />
-    );
-
-    const v = (x: number, y: number, hgt: number, lit: boolean) => (
-      <rect x={x} y={y} width={seg} height={hgt} rx={rx} ry={rx} fill={lit ? on : off} />
-    );
-
-    const segmentsFor = (x: number, lit: boolean[]) => {
-      const iw = digitWidth - pad * 2;
-      const ih = digitHeight - pad * 2;
+    // Create a hexagonal/pointed segment shape for horizontal segments
+    const hSegment = (cx: number, cy: number, len: number, lit: boolean) => {
+      const t = segThick;
+      const halfLen = len / 2;
+      const pointOffset = t * 0.5;
+      // Hexagon shape: pointed at both ends
+      const points = [
+        `${cx - halfLen + pointOffset},${cy}`,
+        `${cx - halfLen},${cy - t / 2}`,
+        `${cx + halfLen},${cy - t / 2}`,
+        `${cx + halfLen - pointOffset},${cy}`,
+        `${cx + halfLen},${cy + t / 2}`,
+        `${cx - halfLen},${cy + t / 2}`,
+      ].join(' ');
       return (
-        <g transform={`translate(${x + pad},${pad})`}>
-          {h(1, 0, iw - 2, lit[0])}
-          {v(iw - seg, 1, ih / 2 - 2, lit[1])}
-          {v(iw - seg, ih / 2 + 1, ih / 2 - 2, lit[2])}
-          {h(1, ih - seg, iw - 2, lit[3])}
-          {v(0, ih / 2 + 1, ih / 2 - 2, lit[4])}
-          {v(0, 1, ih / 2 - 2, lit[5])}
-          {h(1, ih / 2 - seg / 2, iw - 2, lit[6])}
+        <polygon
+          points={points}
+          fill={lit ? onColor : offColor}
+          filter={lit ? 'url(#glow)' : undefined}
+        />
+      );
+    };
+
+    // Create a hexagonal/pointed segment shape for vertical segments
+    const vSegment = (cx: number, cy: number, len: number, lit: boolean) => {
+      const t = segThick;
+      const halfLen = len / 2;
+      const pointOffset = t * 0.5;
+      // Hexagon shape: pointed at top and bottom
+      const points = [
+        `${cx},${cy - halfLen + pointOffset}`,
+        `${cx - t / 2},${cy - halfLen}`,
+        `${cx - t / 2},${cy + halfLen}`,
+        `${cx},${cy + halfLen - pointOffset}`,
+        `${cx + t / 2},${cy + halfLen}`,
+        `${cx + t / 2},${cy - halfLen}`,
+      ].join(' ');
+      return (
+        <polygon
+          points={points}
+          fill={lit ? onColor : offColor}
+          filter={lit ? 'url(#glow)' : undefined}
+        />
+      );
+    };
+
+    // Segment layout for a single digit
+    // Segments: 0=top, 1=top-right, 2=bottom-right, 3=bottom, 4=bottom-left, 5=top-left, 6=middle
+    const renderDigit = (offsetX: number, lit: boolean[]) => {
+      const w = digitWidth;
+      const h = digitHeight;
+      const hLen = w - segThick - segGap * 2; // horizontal segment length
+      const vLen = (h - segThick * 1.5) / 2 - segGap; // vertical segment length
+      
+      const cx = offsetX + w / 2; // center x
+      const topY = segThick / 2 + 0.5;
+      const midY = h / 2;
+      const botY = h - segThick / 2 - 0.5;
+      
+      const leftX = offsetX + segThick / 2 + 0.5;
+      const rightX = offsetX + w - segThick / 2 - 0.5;
+      const topSegY = (topY + midY) / 2;
+      const botSegY = (midY + botY) / 2;
+
+      return (
+        <g key={offsetX} transform={`skewX(-${skew})`} style={{ transformOrigin: `${cx}px ${h/2}px` }}>
+          {/* Segment 0: Top */}
+          {hSegment(cx, topY, hLen, lit[0])}
+          {/* Segment 1: Top Right */}
+          {vSegment(rightX, topSegY, vLen, lit[1])}
+          {/* Segment 2: Bottom Right */}
+          {vSegment(rightX, botSegY, vLen, lit[2])}
+          {/* Segment 3: Bottom */}
+          {hSegment(cx, botY, hLen, lit[3])}
+          {/* Segment 4: Bottom Left */}
+          {vSegment(leftX, botSegY, vLen, lit[4])}
+          {/* Segment 5: Top Left */}
+          {vSegment(leftX, topSegY, vLen, lit[5])}
+          {/* Segment 6: Middle */}
+          {hSegment(cx, midY, hLen, lit[6])}
         </g>
       );
     };
 
-    const map: Record<string, [boolean, boolean, boolean, boolean, boolean, boolean, boolean]> = {
+    // Segment patterns for digits 0-9
+    const segmentMap: Record<string, [boolean, boolean, boolean, boolean, boolean, boolean, boolean]> = {
       '0': [true, true, true, true, true, true, false],
       '1': [false, true, true, false, false, false, false],
       '2': [true, true, false, true, true, false, true],
@@ -836,13 +900,28 @@ export default function Game() {
       '9': [true, true, true, true, false, true, true],
     };
 
-    const width = digitWidth * 3 + gap * 2;
-    const height = digitHeight;
+    const totalWidth = digitWidth * 3 + digitGap * 2;
+    const totalHeight = digitHeight;
+    
     return (
-      <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} shapeRendering="crispEdges">
-        {segmentsFor(0, map[str[0]])}
-        {segmentsFor(digitWidth + gap, map[str[1]])}
-        {segmentsFor(2 * (digitWidth + gap), map[str[2]])}
+      <svg 
+        className="seven-segment-display"
+        viewBox={`0 0 ${totalWidth} ${totalHeight}`}
+        preserveAspectRatio="xMidYMid meet"
+      >
+        <defs>
+          {/* Glow filter for lit segments */}
+          <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="0.8" result="coloredBlur"/>
+            <feMerge>
+              <feMergeNode in="coloredBlur"/>
+              <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+          </filter>
+        </defs>
+        {renderDigit(0, segmentMap[str[0]])}
+        {renderDigit(digitWidth + digitGap, segmentMap[str[1]])}
+        {renderDigit(2 * (digitWidth + digitGap), segmentMap[str[2]])}
       </svg>
     );
   };

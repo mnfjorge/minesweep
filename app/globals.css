@@ -120,14 +120,41 @@ body {
 .ms-led {
   justify-self: start;
   color: var(--ms-led-fg);
-  background: var(--ms-led-bg);
-  border: 2px solid var(--ms-dk);
-  padding: 2px 6px;
+  background: #000000;
+  border: 1px solid #808080;
+  border-top-color: #404040;
+  border-left-color: #404040;
+  padding: 3px 4px;
   font-weight: 700;
-  min-width: 64px;
   text-align: center;
-  border-radius: 3px;
-  box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.6);
+  border-radius: 2px;
+  box-shadow: inset 0 0 4px rgba(0, 0, 0, 0.9), inset 1px 1px 2px rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Responsive 7-segment display sizing */
+.seven-segment-display {
+  width: clamp(42px, 10vw, 58px);
+  height: clamp(21px, 5vw, 29px);
+  display: block;
+}
+
+/* Larger displays on desktop */
+@media (min-width: 768px) {
+  .seven-segment-display {
+    width: clamp(52px, 8vw, 68px);
+    height: clamp(26px, 4vw, 34px);
+  }
+}
+
+/* Extra large screens (1440p+) */
+@media (min-width: 1920px) {
+  .seven-segment-display {
+    width: 72px;
+    height: 36px;
+  }
 }
 
 /* Keep counters flush to edges on wide and narrow screens */
@@ -136,6 +163,12 @@ body {
 }
 .ms-panel > .ms-led:last-child {
   justify-self: end;
+}
+
+/* Ensure LED displays have consistent sizing */
+.ms-led {
+  min-width: auto;
+  flex-shrink: 0;
 }
 
 .ms-smiley {
