@@ -713,14 +713,12 @@ export default function Game() {
       longPressTimerRef.current = setTimeout(() => {
         longPressTriggeredRef.current = true;
         triggerHapticImpact(15);
-        if (tool === 'flag') {
-          revealCell(r, c);
-        } else {
-          toggleFlag(r, c);
-        }
+        // Long-press should always toggle a flag, independent of the current tool,
+        // to avoid accidental reveals that can incorrectly trigger a win.
+        toggleFlag(r, c);
       }, 400);
     },
-    [revealCell, toggleFlag, tool, triggerHapticImpact]
+    [toggleFlag, triggerHapticImpact]
   );
 
   const onCellTouchMove = useCallback(
